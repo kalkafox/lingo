@@ -2,17 +2,11 @@ import Image from 'next/image'
 import { Inter } from 'next/font/google'
 import { useState } from 'react'
 import { assert } from 'console'
-import type { Char, Letter, LingoRow } from '@/types/lingo'
+import type { Char, GuessedLingoRow, Letter, LingoRow } from '@/types/lingo'
 import { useAtom } from 'jotai'
 import { lingoHistoryAtom, lingoRowAtom } from '@/util/atoms'
 import { trpc } from '@/util/trpc'
-
-export const defaultChar: Char = {
-  letter: '' as Letter,
-  correct: false,
-  oop: false,
-  zilch: false,
-}
+import { defaultChar } from '@/util/defaults'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,12 +14,17 @@ export default function Home() {
   const [history, setHistory] = useAtom(lingoHistoryAtom)
   const [words, setWords] = useAtom(lingoRowAtom)
 
-  const guessWord = trpc.guessWord.useQuery(words, {
-    refetchOnMount: false,
-    enabled: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  })
+  const [guessedWords, setGuessedWords] = useState<GuessedLingoRow>([])
+
+  const guessWord = trpc.guessWord.useQuery(
+    words.map((c) => c.letter).join(''),
+    {
+      refetchOnMount: false,
+      enabled: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  )
 
   return (
     <div
@@ -61,6 +60,22 @@ export default function Home() {
               return [...prev, res.data as LingoRow]
             })
             setWords([])
+
+            // setGuessedWords(
+            //   res.data?.map((l) =>
+            //     l.correct
+            //       ? { letter: l.letter, correct: true }
+            //       : { letter: '.', correct: false },
+            //   ) as GuessedLingoRow,
+            // )
+
+            console.log(
+              res.data?.map((l) =>
+                l.correct
+                  ? { letter: l.letter, correct: true }
+                  : { letter: '.', correct: false },
+              ) as GuessedLingoRow,
+            )
           }
         }
       }}>
@@ -146,6 +161,56 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {guessedWords &&
+        guessedWords.map((value, index, array) => {
+          console.log(value)
+          return (
+            <div
+              key={index}
+              className={`relative flex gap-x-2 py-1 self-center justify-center w-full select-none`}>
+              <div
+                className={`inline w-10 h-10 border-2 ${
+                  value.correct && 'bg-green-500/80'
+                }`}>
+                <div className='flex text-center justify-center self-center relative top-1'>
+                  {(value && value.letter) ?? '.'}
+                </div>
+              </div>
+              <div
+                className={`inline w-10 h-10 border-2 ${
+                  value.correct && 'bg-green-500/80'
+                }`}>
+                <div className='flex text-center justify-center self-center relative top-1'>
+                  {(value && value.letter) ?? '.'}
+                </div>
+              </div>
+              <div
+                className={`inline w-10 h-10 border-2 ${
+                  value.correct && 'bg-green-500/80'
+                }`}>
+                <div className='flex text-center justify-center self-center relative top-1'>
+                  {(value && value.letter) ?? '.'}
+                </div>
+              </div>
+              <div
+                className={`inline w-10 h-10 border-2 ${
+                  value.correct && 'bg-green-500/80'
+                }`}>
+                <div className='flex text-center justify-center self-center relative top-1'>
+                  {(value && value.letter) ?? '.'}
+                </div>
+              </div>
+              <div
+                className={`inline w-10 h-10 border-2 ${
+                  value.correct && 'bg-green-500/80'
+                }`}>
+                <div className='flex text-center justify-center self-center relative top-1'>
+                  {(value && value.letter) ?? '.'}
+                </div>
+              </div>
+            </div>
+          )
+        })}
     </div>
   )
 }

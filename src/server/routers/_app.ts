@@ -1,47 +1,43 @@
 import { z } from 'zod'
 import { procedure, router } from '../trpc'
-import { LingoRow } from '@/types/lingo'
+import { Char, LingoRow } from '@/types/lingo'
+import { defaultChar } from '@/util/defaults'
 export const appRouter = router({
   createSession: procedure.query(async () => {
     // TODO: create a random session with a uid that contains the word to guess
   }),
-  guessWord: procedure
-    .input(
-      // TODO: rewrite this to only input strings (already tried and got some weird errors, something to do with memory allocation perhaps)
-      z.array(
-        z.object({
-          oop: z.boolean(),
-          letter: z.string().length(1).toUpperCase(),
-          zilch: z.boolean(),
-          correct: z.boolean(),
-        }),
-      ),
-    )
-    .query(async (q) => {
-      const exampleWord = 'furry'.toUpperCase()
+  guessWord: procedure.input(z.string().length(5)).query(async (q) => {
+    const exampleWord = 'furry'.toUpperCase()
 
-      const letters = exampleWord.split('')
+    const letters = exampleWord.split('')
 
-      const inputLetters = q.input as LingoRow
+    const inputLetters = q.input.split('')
 
-      const parsed = inputLetters.map((c, index) => {
-        if (c.letter === letters[index]) {
-          c.correct = !c.correct
-          c.oop = false
-        } else if (exampleWord.includes(c.letter)) {
-          c.oop = true
-        } else {
-          c.zilch = !c.zilch
-          c.oop = false
-        }
+    const result = inputLetters.map((c, index) => {
+      return {
+        ...defaultChar,
+        letter: c,
+      } as Char
+    }) as LingoRow
 
-        return c
-      })
+    const parsed = result.map((c, index) => {
+      if (c.letter === letters[index]) {
+        c.correct = !c.correct
+        c.oop = false
+      } else if (exampleWord.includes(c.letter)) {
+        c.oop = true
+      } else {
+        c.zilch = !c.zilch
+        c.oop = false
+      }
 
-      console.log(q.input)
+      return c
+    })
 
-      return parsed
-    }),
+    console.log(q.input)
+
+    return parsed
+  }),
 })
 
 export type AppRouter = typeof appRouter
