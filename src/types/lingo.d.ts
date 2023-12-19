@@ -9,6 +9,7 @@ export type Char = {
   correct: boolean
   oop: boolean
   zilch: boolean
+  invalid?: boolean
 }
 
 export type GuessedChar = {

@@ -9,6 +9,11 @@
 # testing
 /coverage
 
+db-out
+drizzle
+
+run/processed.txt
+
 # next.js
 /.next/
 /out/

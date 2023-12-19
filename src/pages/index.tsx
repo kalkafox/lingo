@@ -1,7 +1,5 @@
-import Image from 'next/image'
 import { Inter } from 'next/font/google'
 import { useState } from 'react'
-import { assert } from 'console'
 import type { Char, GuessedLingoRow, Letter, LingoRow } from '@/types/lingo'
 import { useAtom } from 'jotai'
 import { lingoHistoryAtom, lingoRowAtom } from '@/util/atoms'
@@ -16,7 +14,9 @@ export default function Home() {
 
   const [guessedWords, setGuessedWords] = useState<GuessedLingoRow>([])
 
-  const guessWord = trpc.guessWord.useQuery(
+  const pingQuery = trpc.ping.useQuery(null, { refetchInterval: 3000 })
+
+  const guessWordQuery = trpc.guessWord.useQuery(
     words.map((c) => c.letter).join(''),
     {
       refetchOnMount: false,
@@ -26,9 +26,11 @@ export default function Home() {
     },
   )
 
+  console.log(guessedWords.length)
+
   return (
     <div
-      className='fixed w-full h-full'
+      className='absolute w-full h-full'
       tabIndex={0}
       onKeyDown={async (e) => {
         if (e.key === 'Backspace') {
@@ -52,7 +54,7 @@ export default function Home() {
         }
 
         if (words.length === 5 && e.key === 'Enter') {
-          const res = await guessWord.refetch()
+          const res = await guessWordQuery.refetch()
 
           if (!res.error) {
             console.log(res.data)
@@ -69,13 +71,15 @@ export default function Home() {
             //   ) as GuessedLingoRow,
             // )
 
-            console.log(
-              res.data?.map((l) =>
-                l.correct
-                  ? { letter: l.letter, correct: true }
-                  : { letter: '.', correct: false },
-              ) as GuessedLingoRow,
-            )
+            if (res.data?.find((l) => l.correct)) {
+              setGuessedWords(
+                res.data?.map((l) =>
+                  l.correct
+                    ? { letter: l.letter, correct: true }
+                    : { letter: '.', correct: false },
+                ) as GuessedLingoRow,
+              )
+            }
           }
         }
       }}>
@@ -85,90 +89,40 @@ export default function Home() {
           return (
             <div
               key={index}
-              className={`relative flex gap-x-2 py-1 self-center justify-center w-full select-none`}>
-              <div
-                className={`inline w-10 h-10 border-2 ${
-                  (value[0]!.correct && 'bg-green-500/80') ||
-                  (value[0]!.oop && 'bg-yellow-500/80')
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value[0] && value[0].letter) ?? '.'}
-                </div>
-              </div>
-              <div
-                className={`inline w-10 h-10 border-2 ${
-                  (value[1]!.correct && 'bg-green-500/80') ||
-                  (value[1]!.oop && 'bg-yellow-500/80')
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value[1] && value[1].letter) ?? '.'}
-                </div>
-              </div>
-              <div
-                className={`inline w-10 h-10 border-2 ${
-                  (value[2]!.correct && 'bg-green-500/80') ||
-                  (value[2]!.oop && 'bg-yellow-500/80')
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value[2] && value[2].letter) ?? '.'}
-                </div>
-              </div>
-              <div
-                className={`inline w-10 h-10 border-2 ${
-                  (value[3]!.correct && 'bg-green-500/80') ||
-                  (value[3]!.oop && 'bg-yellow-500/80')
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value[3] && value[3].letter) ?? '.'}
-                </div>
-              </div>
-              <div
-                className={`inline w-10 h-10 border-2 ${
-                  (value[4]!.correct && 'bg-green-500/80') ||
-                  (value[4]!.oop && 'bg-yellow-500/80')
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value[4] && value[4].letter) ?? '.'}
-                </div>
-              </div>
+              className={`relative flex gap-x-2 py-1 self-center justify-center select-none`}>
+              {value.map((v, index) => {
+                return (
+                  <div
+                    className={`inline w-10 h-10 border-2 ${
+                      (v.correct && 'bg-green-500/80') ||
+                      (v.oop && 'bg-yellow-500/80') ||
+                      (v.invalid && 'bg-gray-500')
+                    }`}>
+                    <div className='flex text-center justify-center self-center relative top-1'>
+                      {(v && v.letter) ?? '.'}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )
         })}
-      <div className='relative flex gap-x-2 top-5 self-center justify-center w-full select-none'>
-        <div className='inline w-10 h-10 border-2'>
-          <div className='flex text-center justify-center self-center relative top-1'>
-            {(words[0] && words[0].letter) ?? '.'}
+      <div className='relative flex gap-x-2 top-5 self-center justify-center select-none'>
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className='inline w-10 h-10 border-2'>
+            <div className='flex text-center justify-center self-center relative top-1'>
+              {(words[i] && words[i].letter) ?? '.'}
+            </div>
           </div>
-        </div>
-        <div className='inline w-10 h-10 border-2'>
-          <div className='flex text-center justify-center self-center relative top-1'>
-            {(words[1] && words[1].letter) ?? '.'}
-          </div>
-        </div>
-        <div className='inline w-10 h-10 border-2'>
-          <div className='flex text-center justify-center self-center relative top-1'>
-            {(words[2] && words[2].letter) ?? '.'}
-          </div>
-        </div>
-        <div className='inline w-10 h-10 border-2'>
-          <div className='flex text-center justify-center self-center relative top-1'>
-            {(words[3] && words[3].letter) ?? '.'}
-          </div>
-        </div>
-        <div className='inline w-10 h-10 border-2'>
-          <div className='flex text-center justify-center self-center relative top-1'>
-            {(words[4] && words[4].letter) ?? '.'}
-          </div>
-        </div>
+        ))}
       </div>
-      {guessedWords &&
-        guessedWords.map((value, index, array) => {
-          console.log(value)
-          return (
-            <div
-              key={index}
-              className={`relative flex gap-x-2 py-1 self-center justify-center w-full select-none`}>
+      <div
+        className={`relative flex gap-x-2 py-10 self-center justify-center select-none`}>
+        {guessedWords &&
+          guessedWords.map((value, index, array) => {
+            return (
               <div
+                key={index}
                 className={`inline w-10 h-10 border-2 ${
                   value.correct && 'bg-green-500/80'
                 }`}>
@@ -176,41 +130,19 @@ export default function Home() {
                   {(value && value.letter) ?? '.'}
                 </div>
               </div>
-              <div
-                className={`inline w-10 h-10 border-2 ${
-                  value.correct && 'bg-green-500/80'
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value && value.letter) ?? '.'}
-                </div>
-              </div>
-              <div
-                className={`inline w-10 h-10 border-2 ${
-                  value.correct && 'bg-green-500/80'
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value && value.letter) ?? '.'}
-                </div>
-              </div>
-              <div
-                className={`inline w-10 h-10 border-2 ${
-                  value.correct && 'bg-green-500/80'
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value && value.letter) ?? '.'}
-                </div>
-              </div>
-              <div
-                className={`inline w-10 h-10 border-2 ${
-                  value.correct && 'bg-green-500/80'
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value && value.letter) ?? '.'}
-                </div>
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
+      </div>
+      <div
+        className={`w-5 h-5 ${
+          pingQuery.isRefetchError || pingQuery.isError
+            ? 'bg-red-500'
+            : pingQuery.isRefetching || pingQuery.isLoading
+            ? 'bg-yellow-500'
+            : pingQuery.isSuccess
+            ? 'bg-green-500'
+            : 'bg-gray-500'
+        } fixed bottom-0 m-2 rounded-full`}></div>
     </div>
   )
 }
