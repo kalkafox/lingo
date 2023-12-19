@@ -7,6 +7,7 @@ export const appRouter = router({
   }),
   guessWord: procedure
     .input(
+      // TODO: rewrite this to only input strings (already tried and got some weird errors, something to do with memory allocation perhaps)
       z.array(
         z.object({
           oop: z.boolean(),
