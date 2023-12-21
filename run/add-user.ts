@@ -9,22 +9,12 @@ console.log(process.env.DATABASE_USERNAME)
 
 const db = drizzle(connection, { schema, mode: 'default' })
 
-const file = Bun.file('run/processed.txt')
+Bun.argv.splice(0, 2)
 
-const words = (await file.text()).split('\n').filter((w) => w.length != 0)
+await db.insert(schema.lingoUsers).values({
+  uid: Bun.argv[0],
+})
 
-console.log(`Counted ${words.length} words.`)
-
-for (const word of words) {
-  try {
-    await db.insert(schema.lingoWords).values({
-      word,
-    })
-  } catch (e) {
-    console.error(e)
-  }
-}
-
-console.log('Done.')
+console.log(`Added user ${Bun.argv[0]}`)
 
 connection.end()
