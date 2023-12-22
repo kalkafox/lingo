@@ -1,97 +1,155 @@
 import { z } from 'zod'
-import { procedure, router } from '../trpc'
+import { procedure, protectedProcedure, router } from '../trpc'
 import { Char, LingoRow, LingoRows } from '@/types/lingo'
 import { defaultChar } from '@/util/defaults'
 import { eq, max } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import * as schema from '@/db/schema'
-import { db, tryConnection } from '../db'
+import { db } from '../db'
 import cryptoRandomString from 'crypto-random-string'
 
 export const appRouter = router({
-  createSession: procedure.input(z.null()).query(async ({ ctx, input }) => {
-    // TODO: create a random session with a uid that contains the word to guess
-    const wordsCount = await db
-      .select({
-        value: max(schema.lingoWords.id),
+  createSession: procedure
+    .input(z.string().optional())
+    .query(async ({ ctx, input }) => {
+      const wordsCount = await db
+        .select({
+          value: max(schema.lingoWords.id),
+        })
+        .from(schema.lingoWords)
+
+      if (
+        !wordsCount[0].value ||
+        (wordsCount[0].value && wordsCount[0].value <= 0)
+      ) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: "Sorry, we don't have any words we can use right now.",
+        })
+      }
+
+      const randIndex = Math.floor(
+        Math.random() * (wordsCount[0].value - 0 + 1),
+      )
+
+      const uniqueId = cryptoRandomString({ length: 10, type: 'url-safe' })
+
+      const user = (
+        await db.query.lingoUsers.findMany({
+          where: eq(schema.lingoUsers.email, ctx.session?.user?.email!),
+        })
+      )[0]
+
+      await db.insert(schema.lingoSessions).values({
+        uniqueId,
+        wordId: randIndex,
+        fingerprint: input,
+        created: Date.now(),
+        owner: user && user.id ? user.id : null,
       })
-      .from(schema.lingoWords)
 
-    if (
-      !wordsCount[0].value ||
-      (wordsCount[0].value && wordsCount[0].value <= 0)
-    ) {
-      return
-    }
+      console.log('Created session.')
 
-    const randIndex = Math.floor(Math.random() * (wordsCount[0].value - 0 + 1))
+      return uniqueId
+    }),
+  claimSession: protectedProcedure.input(z.string()).query(async (q) => {
+    console.log(q.ctx.session.user.name)
 
-    const uniqueId = cryptoRandomString({ length: 10, type: 'base64' })
-
-    console.log(ctx.session?.user?.name!)
-
-    const user = (
-      await db.query.lingoUsers.findMany({
-        where: eq(schema.lingoUsers.email, ctx.session?.user?.email!),
-      })
-    )[0]
-
-    await db.insert(schema.lingoSessions).values({
-      uniqueId,
-      wordId: randIndex,
-      created: Date.now(),
-      owner: user.id ? user.id : null,
+    const session = await db.query.lingoSessions.findFirst({
+      where: eq(schema.lingoSessions.uniqueId, q.input),
     })
 
-    console.log('Created session.')
+    if (!session) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Could not find session.',
+      })
+    }
 
-    return uniqueId
-  }),
-  // login: procedure.input(z.string().min(1).max(255)).query(async (q) => {
-  //   const connection = await mysql.createConnection(config)
+    if (session.owner) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Session is already claimed!',
+      })
+    }
 
-  //   const db = drizzle(connection, { schema, mode: 'default' })
-
-  //   try {
-  //     await db.insert(schema.lingoUser).values({
-  //       uid: q.input,
-  //     })
-  //   } catch (e) {
-  //     //console.error(e)
-  //     // Check if the user is in the db
-
-  //     const res = (
-  //       await db
-  //         .select()
-  //         .from(schema.lingoUser)
-  //         .where(eq(schema.lingoUser.uid, q.input))
-  //     )[0]);
-  //     if (!res) {
-  //       throw new TRPCError({
-  //         code: 'INTERNAL_SERVER_ERROR',
-  //         message: 'User not found.',
-  //       })
-  //     }
-
-  //     q.ctx.fingerprint = res.uid
-  //   }
-
-  //   connection.end()
-
-  //   return 'ok'
-  // }),
-  ping: procedure.input(z.null()).query(async () => {
     try {
-      const conn = await tryConnection()
-      conn.end()
-      return 'hi'
+      // Get user info
+
+      if (!q.ctx.session.user.name) {
+        // this shouldn't happen, but just in case
+        throw new TRPCError({ code: 'UNAUTHORIZED' })
+      }
+
+      const user = await db.query.lingoUsers.findFirst({
+        where: eq(schema.lingoUsers.name, q.ctx.session.user.name),
+      })
+
+      if (!user) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' })
+      }
+
+      await db.update(schema.lingoSessions).set({
+        owner: user.id,
+      })
+
+      return 'ok!'
     } catch (e) {
+      console.error(e)
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Could not connect to database.',
+        message: 'Database error.',
       })
     }
   }),
+  ping: procedure.input(z.null()).query(async () => {
+    // try {
+    //   const conn = await tryConnection()
+    //   conn.end()
+    //   return 'hi'
+    // } catch (e) {
+    //   throw new TRPCError({
+    //     code: 'INTERNAL_SERVER_ERROR',
+    //     message: 'Could not connect to database.',
+    //   })
+    // }
+    return 'hi'
+  }),
+  getSessionInfo: procedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      if (!input.id || input.id.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Empty ID.',
+        })
+      }
+
+      const session = await db.query.lingoSessions.findFirst({
+        where: eq(schema.lingoSessions.uniqueId, input.id),
+      })
+
+      if (!session) {
+        throw new TRPCError({
+          code: 'PARSE_ERROR',
+          message: 'Could not find session.',
+        })
+      }
+
+      const owner = session.owner
+        ? await db.query.lingoUsers.findFirst({
+            where: eq(schema.lingoUsers.id, session.owner),
+          })
+        : null
+
+      return {
+        finished: session.finished,
+        created: session.created,
+        history: session.history,
+        fingerprint: session.fingerprint,
+        owner,
+      }
+    }),
   guessWord: procedure
     .input(
       z.object({
@@ -101,6 +159,13 @@ export const appRouter = router({
     )
     .query(async (q) => {
       const exampleWord = 'furry'.toUpperCase()
+
+      if (!q.input.id || q.input.id.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Empty ID.',
+        })
+      }
 
       const session = await db.query.lingoSessions.findFirst({
         where: eq(schema.lingoSessions.uniqueId, q.input.id),
@@ -113,7 +178,40 @@ export const appRouter = router({
         })
       }
 
-      console.log(session)
+      const sessionWordData = await db.query.lingoWords.findFirst({
+        where: eq(schema.lingoWords.id, session.wordId),
+      })
+
+      if (!sessionWordData) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Word not found somehow',
+        })
+      }
+
+      if (typeof session === 'object' && session && 'history' in session) {
+        let historyData: LingoRows = []
+
+        if (typeof session.history === 'string' && session.history) {
+          historyData = JSON.parse(session.history) as LingoRows
+
+          console.log(historyData)
+
+          // if (
+          //   historyData.find(
+          //     (row) =>
+          //       row
+          //         .map((c) => c.letter)
+          //         .join('')
+          //         .toUpperCase() === q.input.word.toUpperCase(),
+          //   )
+          // ) {
+          //   return {
+          //     message: 'Same word found. Try another!',
+          //   }
+          // }
+        }
+      }
 
       // const wordsCount = await db
       //   .select({
@@ -130,49 +228,46 @@ export const appRouter = router({
 
       // const randIndex = Math.floor(Math.random() * (wordsCount[0].value - 0 + 1))
 
-      const exists = await db
-        .select()
-        .from(schema.lingoWords)
-        .where(eq(schema.lingoWords.word, q.input.word))
+      const inputWordData = await db.query.lingoWords.findFirst({
+        where: eq(schema.lingoWords.word, q.input.word),
+      })
 
       const inputLetters = q.input.word.split('')
 
-      console.log(exists)
-
-      if (exists.length === 0) {
+      if (!inputWordData || inputWordData.word.length === 0) {
         const result = inputLetters.map((c) => {
           return {
             ...defaultChar,
             letter: c,
+            // todo: refactor this
             invalid: true,
-          }
-        })
+          } as Char
+        }) as LingoRow
 
-        let history: LingoRow[] = []
+        const history = session.history || []
+        console.log(history)
 
         if (
-          typeof session === 'object' &&
-          session &&
-          'history' in session &&
-          typeof session.history === 'object' &&
-          session.history
+          !history.find(
+            (row) =>
+              (row as LingoRow)
+                .map((c) => c.letter)
+                .join('')
+                .toUpperCase() === q.input.word.toUpperCase(),
+          )
         ) {
-          const historyData: LingoRows = session.history as LingoRows
-
-          // todo: figure out why this is being a bitch
-
-          history.push(historyData)
-
+          history.push(result)
           await db
             .update(schema.lingoSessions)
-            .set({ history: JSON.stringify(result) })
+            .set({ history: history })
             .where(eq(schema.lingoSessions.uniqueId, q.input.id))
+          return { duplicate: true }
         }
-
-        return result
       }
 
-      const letters = exampleWord.split('')
+      const letters = sessionWordData.word.toUpperCase().split('')
+
+      console.log(sessionWordData.word)
 
       const result = inputLetters.map((c, index) => {
         return {
@@ -181,11 +276,17 @@ export const appRouter = router({
         } as Char
       }) as LingoRow
 
-      const parsed = result.map((c, index) => {
+      const parsed = result.map((c, index, tbl) => {
         if (c.letter === letters[index]) {
           c.correct = !c.correct
           c.oop = false
-        } else if (exampleWord.includes(c.letter)) {
+        } else if (
+          sessionWordData.word.toUpperCase().includes(c.letter) &&
+          !c.oop &&
+          !tbl.find(
+            (char) => char.letter === c.letter && (char.correct || char.oop),
+          )
+        ) {
           c.oop = true
         } else {
           c.zilch = !c.zilch
@@ -193,9 +294,40 @@ export const appRouter = router({
         }
 
         return c
-      })
+      }) as LingoRow
 
-      console.log(q.input)
+      let finished = 0
+
+      if (typeof session === 'object' && session && 'history' in session) {
+        if (parsed.filter((c) => c.correct).length === 5) {
+          // Solved the puzzle!
+          finished = Date.now()
+        }
+
+        const history = session.history || []
+
+        const exists = history.find(
+          (row) =>
+            (row as LingoRow)
+              .map((c) => c.letter)
+              .join('')
+              .toUpperCase() === q.input.word.toUpperCase(),
+        )
+
+        if (!exists) {
+          history.push(parsed)
+
+          await db
+            .update(schema.lingoSessions)
+            .set({
+              history: history as LingoRows,
+              finished: finished >= 0 ? finished : null,
+            })
+            .where(eq(schema.lingoSessions.uniqueId, q.input.id))
+        } else {
+          return { duplicate: true }
+        }
+      }
 
       return parsed
     }),

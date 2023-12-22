@@ -19,10 +19,10 @@ export type GuessedChar = {
 
 // We're not checking for length here because there may be cases where the LingoRow returns with length < 5
 // I may rewrite this in the future depending on how i want to handle the error case here
-export type LingoRow = ([Char, Char, Char, Char, Char] & { length: 5 }) | []
+export type LingoRow = (Char[] & { length: 5 }) | []
 
 export type GuessedLingoRow =
-  | ([GuessedChar, GuessedChar, GuessedChar, GuessedChar, GuessedChar] & {
+  | (GuessedChar[] & {
       length: 5
     })
   | []

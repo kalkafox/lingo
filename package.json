@@ -18,6 +18,8 @@
     "@trpc/next": "^10.44.1",
     "@trpc/react-query": "^10.44.1",
     "@trpc/server": "^10.44.1",
+    "@types/canvas-confetti": "^1.6.4",
+    "canvas-confetti": "^1.9.2",
     "crypto-random-string": "^5.0.0",
     "dotenv": "^16.3.1",
     "drizzle-orm": "^0.29.1",
@@ -26,6 +28,7 @@
     "next": "^14.0.3",
     "next-auth": "^4.24.5",
     "react": "^18",
+    "react-canvas-confetti": "^1.4.0",
     "react-dom": "^18",
     "zod": "^3.22.4"
   },

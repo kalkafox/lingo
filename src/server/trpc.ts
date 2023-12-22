@@ -1,4 +1,4 @@
-import { initTRPC } from '@trpc/server'
+import { TRPCError, initTRPC } from '@trpc/server'
 import { CreateNextContextOptions } from '@trpc/server/adapters/next'
 import { getServerAuthSession } from './auth'
 import { drizzle } from 'drizzle-orm/mysql2'
@@ -23,5 +23,19 @@ export const createContext = async (opts: CreateNextContextOptions) => {
 
 const t = initTRPC.context<typeof createContext>().create()
 // Base router and procedure helpers
+
+const isAuthed = t.middleware(({ ctx, next }) => {
+  if (!ctx.session || !ctx.session.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' })
+  }
+  return next({
+    ctx: {
+      // infers the `session` as non-nullable
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  })
+})
+
 export const router = t.router
 export const procedure = t.procedure
+export const protectedProcedure = t.procedure.use(isAuthed)

@@ -12,12 +12,13 @@ import {
   varchar,
 } from 'drizzle-orm/mysql-core'
 import { AdapterAccount } from '@auth/core/adapters'
+import { LingoRows } from '@/types/lingo'
 
 export const lingoSchema = mysqlSchema('lingo')
 
 export const lingoWords = lingoSchema.table('words', {
   id: int('id').primaryKey().autoincrement(),
-  word: text('word').notNull().unique(),
+  word: varchar('word', { length: 5 }).notNull().unique(),
 })
 
 export const lingoUsers = lingoSchema.table('user', {
@@ -73,7 +74,8 @@ export const lingoSessions = lingoSchema.table('game_sessions', {
   owner: varchar('userId', { length: 255 }).references(() => lingoUsers.id),
   created: bigint('created_at', { mode: 'number' }).notNull(),
   finished: bigint('finished_at', { mode: 'number' }),
-  history: json('history'),
+  history: json('history').$type<LingoRows>(),
+  fingerprint: varchar('fingerprint', { length: 255 }),
 })
 
 export const sessions = lingoSchema.table('session', {

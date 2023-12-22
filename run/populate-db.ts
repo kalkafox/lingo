@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise'
 import { config } from '@/db/config'
 import * as schema from '@/db/schema'
 
-const connection = await mysql.createConnection(config)
+const connection = mysql.createPool(config)
 
 console.log(process.env.DATABASE_USERNAME)
 
@@ -15,15 +15,17 @@ const words = (await file.text()).split('\n').filter((w) => w.length != 0)
 
 console.log(`Counted ${words.length} words.`)
 
+const jobs = []
+
 for (const word of words) {
-  try {
-    await db.insert(schema.lingoWords).values({
+  jobs.push(
+    db.insert(schema.lingoWords).values({
       word,
-    })
-  } catch (e) {
-    console.error(e)
-  }
+    }),
+  )
 }
+
+await Promise.all(jobs)
 
 console.log('Done.')
 
