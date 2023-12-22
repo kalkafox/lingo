@@ -1,16 +1,24 @@
 import { z } from 'zod'
 import { procedure, protectedProcedure, router } from '../trpc'
-import { Char, LingoRow, LingoRows } from '@/types/lingo'
+import { Char, Letter, LingoRow, LingoRows } from '@/types/lingo'
 import { defaultChar } from '@/util/defaults'
 import { eq, max } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
 import * as schema from '@/db/schema'
 import { db } from '../db'
 import cryptoRandomString from 'crypto-random-string'
+import { DictionaryResponse } from '@/types/dictionary'
 
 export const appRouter = router({
   createSession: procedure
-    .input(z.string().optional())
+    .input(
+      z.object({
+        fingerprint: z.string().optional(),
+        settings: z.object({
+          firstLetter: z.boolean(),
+        }),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const wordsCount = await db
         .select({
@@ -40,12 +48,45 @@ export const appRouter = router({
         })
       )[0]
 
+      const history: LingoRows = []
+
+      if (input.settings.firstLetter) {
+        const wordData = await db.query.lingoWords.findFirst({
+          where: eq(schema.lingoWords.id, randIndex),
+        })
+
+        if (wordData) {
+          const row: Char[] = [] as LingoRow
+
+          row.push({
+            letter: wordData.word.split('')[0].toUpperCase() as Letter,
+            correct: true,
+            oop: false,
+            zilch: false,
+          } as Char)
+
+          const blankRows = Array.from({ length: 4 }, (_, i) => ({
+            letter: null,
+            correct: false,
+            oop: false,
+            zilch: false,
+          })) as LingoRow
+
+          blankRows.forEach((c) => {
+            row.push(c)
+          })
+
+          history.push(row as LingoRow)
+        }
+      }
+
       await db.insert(schema.lingoSessions).values({
         uniqueId,
         wordId: randIndex,
-        fingerprint: input,
+        fingerprint: input.fingerprint,
         created: Date.now(),
         owner: user && user.id ? user.id : null,
+        history,
       })
 
       console.log('Created session.')
@@ -53,7 +94,7 @@ export const appRouter = router({
       return uniqueId
     }),
   claimSession: protectedProcedure.input(z.string()).query(async (q) => {
-    console.log(q.ctx.session.user.name)
+    //console.log(q.ctx.session.user.name)
 
     const session = await db.query.lingoSessions.findFirst({
       where: eq(schema.lingoSessions.uniqueId, q.input),
@@ -150,6 +191,15 @@ export const appRouter = router({
         owner,
       }
     }),
+  getDefinition: procedure.input(z.string()).query(async ({ input }) => {
+    const api_url = `https://api.dictionaryapi.dev/api/v2/entries/en/${input}`
+
+    const res = await fetch(api_url)
+
+    console.log(input)
+
+    return (await res.json()) as DictionaryResponse
+  }),
   guessWord: procedure
     .input(
       z.object({
@@ -189,13 +239,15 @@ export const appRouter = router({
         })
       }
 
+      console.log(sessionWordData.word)
+
       if (typeof session === 'object' && session && 'history' in session) {
         let historyData: LingoRows = []
 
         if (typeof session.history === 'string' && session.history) {
           historyData = JSON.parse(session.history) as LingoRows
 
-          console.log(historyData)
+          //console.log(historyData)
 
           // if (
           //   historyData.find(
@@ -235,39 +287,38 @@ export const appRouter = router({
       const inputLetters = q.input.word.split('')
 
       if (!inputWordData || inputWordData.word.length === 0) {
-        const result = inputLetters.map((c) => {
-          return {
-            ...defaultChar,
-            letter: c,
-            // todo: refactor this
-            invalid: true,
-          } as Char
-        }) as LingoRow
+        // const result = inputLetters.map((c) => {
+        //   return {
+        //     ...defaultChar,
+        //     letter: c,
+        //     // todo: refactor this
+        //     invalid: true,
+        //   } as Char
 
-        const history = session.history || []
-        console.log(history)
+        console.log('nope')
+        return { invalid: true }
+      }
 
-        if (
-          !history.find(
-            (row) =>
-              (row as LingoRow)
-                .map((c) => c.letter)
-                .join('')
-                .toUpperCase() === q.input.word.toUpperCase(),
-          )
-        ) {
-          history.push(result)
-          await db
-            .update(schema.lingoSessions)
-            .set({ history: history })
-            .where(eq(schema.lingoSessions.uniqueId, q.input.id))
-          return { duplicate: true }
-        }
+      const history = session.history || []
+      //console.log(history)
+
+      if (
+        history.find(
+          (row) =>
+            (row as LingoRow)
+              .map((c) => c.letter)
+              .join('')
+              .toUpperCase() === q.input.word.toUpperCase(),
+        )
+      ) {
+        return { duplicate: true }
       }
 
       const letters = sessionWordData.word.toUpperCase().split('')
 
-      console.log(sessionWordData.word)
+      //console.log(sessionWordData.word)
+
+      console.log('ya')
 
       const result = inputLetters.map((c, index) => {
         return {
@@ -276,11 +327,20 @@ export const appRouter = router({
         } as Char
       }) as LingoRow
 
-      const parsed = result.map((c, index, tbl) => {
+      const half_parsed = result.map((c, index, tbl) => {
         if (c.letter === letters[index]) {
           c.correct = !c.correct
           c.oop = false
-        } else if (
+        } else {
+          c.zilch = !c.zilch
+          c.oop = false
+        }
+
+        return c
+      }) as LingoRow
+
+      const parsed = half_parsed.map((c, index, tbl) => {
+        if (
           sessionWordData.word.toUpperCase().includes(c.letter) &&
           !c.oop &&
           !tbl.find(
@@ -288,9 +348,6 @@ export const appRouter = router({
           )
         ) {
           c.oop = true
-        } else {
-          c.zilch = !c.zilch
-          c.oop = false
         }
 
         return c

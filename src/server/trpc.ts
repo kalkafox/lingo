@@ -1,11 +1,6 @@
 import { TRPCError, initTRPC } from '@trpc/server'
 import { CreateNextContextOptions } from '@trpc/server/adapters/next'
 import { getServerAuthSession } from './auth'
-import { drizzle } from 'drizzle-orm/mysql2'
-import mysql from 'mysql2/promise'
-import { config } from '@/db/config'
-
-import * as schema from '@/db/schema'
 
 // Avoid exporting the entire t-object
 // since it's not very descriptive.

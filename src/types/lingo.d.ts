@@ -4,7 +4,11 @@
 
 export type Letter = string & { length: 1 } & Uppercase<string>
 
-export type Char = {
+export interface Settings {
+  firstLetter: boolean
+}
+
+export interface Char {
   letter: Letter
   correct: boolean
   oop: boolean
@@ -12,7 +16,7 @@ export type Char = {
   invalid?: boolean
 }
 
-export type GuessedChar = {
+export interface GuessedChar {
   letter: Letter
   correct: boolean
 }

@@ -3,6 +3,7 @@ import { GuessedLingoRow, LingoRow, LingoRows } from '@/types/lingo'
 import {
   confettiVisibleAtom,
   fingerprintAtom,
+  gameSettingsAtom,
   lingoHistoryAtom,
   lingoRowAtom,
 } from '@/util/atoms'
@@ -19,7 +20,7 @@ function Game() {
   const router = useRouter()
 
   const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
-
+  const [gameSettings, setGameSettings] = useAtom(gameSettingsAtom)
   const [confettiVisible, setConfettiVisible] = useAtom(confettiVisibleAtom)
 
   useEffect(() => {
@@ -37,6 +38,12 @@ function Game() {
 
   const [guessedWords, setGuessedWords] = useState<GuessedLingoRow>([])
 
+  const [solvedWord, setSolvedWord] = useState('')
+
+  const definitionQuery = trpc.getDefinition.useQuery(solvedWord, {
+    enabled: false,
+  })
+
   const claimSessionQuery = trpc.claimSession.useQuery(gameId, {
     enabled: false,
   })
@@ -48,12 +55,18 @@ function Game() {
     { enabled: false },
   )
 
-  const createSessionQuery = trpc.createSession.useQuery(fingerprint, {
-    enabled: false,
-  })
+  const createSessionQuery = trpc.createSession.useQuery(
+    {
+      fingerprint,
+      settings: gameSettings,
+    },
+    {
+      enabled: false,
+    },
+  )
 
   useEffect(() => {
-    console.log(fingerprint)
+    //console.log(fingerprint)
   }, [fingerprint])
 
   useEffect(() => {
@@ -75,7 +88,7 @@ function Game() {
   )
 
   useEffect(() => {
-    console.log(history)
+    console.log(guessedWords)
     history.forEach((row) => {
       setGuessedWords(
         (prev) =>
@@ -93,6 +106,22 @@ function Game() {
   }, [history])
 
   useEffect(() => {
+    if (solvedWord.length > 0) {
+      definitionQuery.refetch()
+    }
+  }, [solvedWord])
+
+  useEffect(() => {
+    if (guessedWords && guessedWords.filter((c) => c.correct).length === 5) {
+      setSolvedWord(guessedWords.map((c) => c.letter).join(''))
+    }
+  }, [guessedWords])
+
+  useEffect(() => {
+    console.log(definitionQuery.data)
+  }, [definitionQuery.data])
+
+  useEffect(() => {
     if (
       sessionInfoQuery.data &&
       'history' in sessionInfoQuery.data &&
@@ -101,14 +130,14 @@ function Game() {
       Array.isArray(sessionInfoQuery.data.history) &&
       sessionInfoQuery.data.history.length >= 0
     ) {
-      console.log(sessionInfoQuery.data)
+      //console.log(sessionInfoQuery.data)
       setHistory((prev) => sessionInfoQuery.data.history as LingoRows)
     }
 
     if (sessionInfoQuery.data && sessionInfoQuery.data.finished) {
       const now = Date.now()
 
-      console.log(now - sessionInfoQuery.data.finished)
+      //console.log(now - sessionInfoQuery.data.finished)
 
       if (now - sessionInfoQuery.data.finished <= 5000) {
         setConfettiVisible(true)
@@ -119,7 +148,7 @@ function Game() {
   return (
     <>
       <div
-        className={`absolute w-full h-full ${inter.className}`}
+        className={`absolute w-full h-full bg-slate-900 text-slate-100 ${inter.className}`}
         tabIndex={0}
         onKeyDown={async (e) => {
           if (sessionInfoQuery.data && sessionInfoQuery.data.finished) {
@@ -146,14 +175,15 @@ function Game() {
           if (words.length === 5 && e.key === 'Enter') {
             const res = await guessWordQuery.refetch()
 
-            console.log(res.data)
+            //console.log(res.data)
 
             if (
               res.data &&
-              'duplicate' in res.data &&
-              typeof res.data.duplicate === 'boolean'
+              (('duplicate' in res.data &&
+                typeof res.data.duplicate === 'boolean') ||
+                ('invalid' in res.data &&
+                  typeof res.data.invalid === 'boolean'))
             ) {
-              console.error('Duplicate word. Try another one!')
               setWords([])
               return
             }
@@ -208,7 +238,7 @@ function Game() {
           </div>
         )}
         <div
-          className={`relative flex gap-x-2 py-10 self-center justify-center select-none`}>
+          className={`relative flex gap-x-2 my-8 self-center justify-center select-none`}>
           {guessedWords &&
             guessedWords.map((value, index, array) => {
               return (
@@ -227,6 +257,16 @@ function Game() {
         {sessionInfoQuery.data && sessionInfoQuery.data.finished ? (
           <div
             className={`relative flex flex-col gap-y-2 text-center self-center justify-center items-center select-none ${inter.className}`}>
+            {definitionQuery.data && definitionQuery.data[0] && (
+              <div className='bg-gray-700 p-2 rounded-lg w-80'>
+                <div>
+                  {
+                    definitionQuery.data[0].meanings[0].definitions[0]
+                      .definition
+                  }
+                </div>
+              </div>
+            )}
             <div>
               Finished in{' '}
               {sessionInfoQuery.data.finished - sessionInfoQuery.data.created}ms
@@ -260,7 +300,7 @@ function Game() {
                           break
                       }
                     }}
-                    className='bg-gray-900 p-2 rounded-lg'>
+                    className='bg-slate-700 p-2 rounded-lg'>
                     Claim it!
                   </button>
                 </div>
@@ -268,7 +308,7 @@ function Game() {
             <div>
               <button
                 onClick={async () => {
-                  console.log(fingerprint)
+                  //console.log(fingerprint)
                   if (fingerprint && fingerprint !== '') {
                     const res = await createSessionQuery.refetch()
                     setGuessedWords([])
@@ -278,7 +318,7 @@ function Game() {
                     router.push(`/game/${res.data}`)
                   }
                 }}
-                className={`bg-gray-900 p-2 rounded-lg`}>
+                className={`bg-slate-700 p-2 rounded-lg`}>
                 {createSessionQuery.isRefetching ? (
                   <svg
                     aria-hidden='true'

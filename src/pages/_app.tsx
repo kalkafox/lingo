@@ -5,7 +5,11 @@ import { trpc } from '@/util/trpc'
 import { useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { useRouter } from 'next/router'
-import { fingerprintAtom, pathHistoryAtom } from '@/util/atoms'
+import {
+  fingerprintAtom,
+  gameSettingsAtom,
+  pathHistoryAtom,
+} from '@/util/atoms'
 import Head from 'next/head'
 import meta from '@/data/meta.json'
 
@@ -15,23 +19,30 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
 
   const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
   const [pathHistory, setPathHistory] = useAtom(pathHistoryAtom)
+  const [gameSettings, setGameSettings] = useAtom(gameSettingsAtom)
 
-  const createSessionQuery = trpc.createSession.useQuery(fingerprint, {
-    enabled: false,
-  })
+  const createSessionQuery = trpc.createSession.useQuery(
+    {
+      fingerprint,
+      settings: gameSettings,
+    },
+    {
+      enabled: false,
+    },
+  )
 
   useEffect(() => {
     if (router.asPath === '/game') {
       const createSession = async () => {
         if (fingerprint && fingerprint !== '') {
           if (!gameId || gameId.length === 0) {
-            console.log(pathHistory)
+            //console.log(pathHistory)
             if (pathHistory.find((l) => l === router.asPath)) {
               return
             }
             const res = await createSessionQuery.refetch()
 
-            console.log(router.asPath)
+            //console.log(router.asPath)
 
             setPathHistory((prev) => [...prev, router.asPath])
 
