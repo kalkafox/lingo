@@ -235,6 +235,7 @@ function Game() {
                 </div>
               </div>
             ))}
+            <input className='absolute h-10 opacity-0' type='text'></input>
           </div>
         )}
         <div

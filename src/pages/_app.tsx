@@ -69,7 +69,6 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
         .then((result) => {
           setFingerprint(result.visitorId)
           window.localStorage.setItem('fingerprint', result.visitorId)
-          return
         }),
     )
 
@@ -99,8 +98,8 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
     <SessionProvider session={session}>
       <Provider>
         <Head>
-          <meta name='msapplication-TileColor' content='#79BC71' />
-          <meta name='theme-color' content='#79BC71' />
+          <meta name='msapplication-TileColor' content='#0f172a' />
+          <meta name='theme-color' content='#0f172a' />
           <meta name='description' content={meta.description} />
           <meta property='og:title' content={meta.title} />
           <meta property='og:description' content={meta.description} />
