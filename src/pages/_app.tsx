@@ -2,16 +2,23 @@ import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import { Provider, useAtom } from 'jotai'
 import { trpc } from '@/util/trpc'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import {
   fingerprintAtom,
   gameSettingsAtom,
+  localSettingsAtom,
   pathHistoryAtom,
 } from '@/util/atoms'
 import Head from 'next/head'
 import meta from '@/data/meta.json'
+import dynamic from 'next/dynamic'
+import chroma from 'chroma-js'
+
+const ColorfulComponent = dynamic(() => import('@/components/Colorful'), {
+  ssr: false,
+})
 
 const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   const router = useRouter()
@@ -20,6 +27,9 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
   const [pathHistory, setPathHistory] = useAtom(pathHistoryAtom)
   const [gameSettings, setGameSettings] = useAtom(gameSettingsAtom)
+  const [localSettings, setLocalSettings] = useAtom(localSettingsAtom)
+
+  const [colorPickerVisible, setColorPickerVisible] = useState(false)
 
   const createSessionQuery = trpc.createSession.useQuery(
     {
@@ -30,6 +40,29 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
       enabled: false,
     },
   )
+
+  useEffect(() => {
+    // stupid hack
+    const getBackground = () => {
+      if (window.localStorage.getItem('background')) {
+        setLocalSettings({
+          background: window.localStorage.getItem('background')!,
+        })
+      }
+    }
+
+    const interval = setInterval(() => {
+      getBackground()
+    }, 500)
+
+    getBackground()
+
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    console.log(localSettings)
+  }, [localSettings])
 
   useEffect(() => {
     if (router.asPath === '/game') {
@@ -98,8 +131,11 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
     <SessionProvider session={session}>
       <Provider>
         <Head>
-          <meta name='msapplication-TileColor' content='#0f172a' />
-          <meta name='theme-color' content='#0f172a' />
+          <meta
+            name='msapplication-TileColor'
+            content={localSettings.background}
+          />
+          <meta name='theme-color' content={localSettings.background} />
           <meta name='description' content={meta.description} />
           <meta property='og:title' content={meta.title} />
           <meta property='og:description' content={meta.description} />
@@ -115,7 +151,30 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
           <meta name='twitter:description' content={meta.description} />
           <meta name='twitter:image' content={meta.image} />
         </Head>
-        <Component {...pageProps} />
+        <div
+          style={{
+            color:
+              chroma(localSettings.background).luminance() <= 0.3
+                ? '#fff'
+                : '#000',
+            backgroundColor: localSettings.background,
+          }}
+          className='absolute w-full h-full transition-colors'>
+          <Component {...pageProps} />
+        </div>
+        <div className='bottom-0 fixed right-0 m-4 flex flex-col'>
+          {colorPickerVisible && localSettings.background && (
+            <>
+              <ColorfulComponent />
+            </>
+          )}
+          <button
+            onClick={() => {
+              setColorPickerVisible((prev) => !prev)
+            }}>
+            Icon placeholder
+          </button>
+        </div>
       </Provider>
     </SessionProvider>
   )

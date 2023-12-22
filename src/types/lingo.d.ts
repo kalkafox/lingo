@@ -8,6 +8,10 @@ export interface Settings {
   firstLetter: boolean
 }
 
+export interface LocalSettings {
+  background: string
+}
+
 export interface Char {
   letter: Letter
   correct: boolean

@@ -148,7 +148,7 @@ function Game() {
   return (
     <>
       <div
-        className={`absolute w-full h-full bg-slate-900 text-slate-100 ${inter.className}`}
+        className={`absolute w-full h-full text-slate-100 ${inter.className}`}
         tabIndex={0}
         onKeyDown={async (e) => {
           if (sessionInfoQuery.data && sessionInfoQuery.data.finished) {
@@ -347,7 +347,7 @@ function Game() {
         )}
         <div>
           <div
-            className={`w-5 h-5 ${
+            className={`w-5 h-5 transition-colors ${
               pingQuery.isError && pingQuery.error
                 ? 'bg-red-500'
                 : pingQuery.isRefetching || pingQuery.isLoading
