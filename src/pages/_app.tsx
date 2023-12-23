@@ -159,9 +159,8 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
                 : '#000',
             backgroundColor: localSettings.background,
           }}
-          className='absolute w-full h-full transition-colors'>
-          <Component {...pageProps} />
-        </div>
+          className='fixed w-full h-full transition-colors'></div>
+        <Component {...pageProps} />
         <div className='bottom-0 fixed right-0 m-4 flex flex-col'>
           {colorPickerVisible && localSettings.background && (
             <>

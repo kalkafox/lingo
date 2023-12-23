@@ -145,63 +145,13 @@ function Game() {
     }
   }, [sessionInfoQuery.data])
 
+  const [inputFocused, setInputFocused] = useState(false)
+
   return (
     <>
       <div
         className={`absolute w-full h-full text-slate-100 ${inter.className}`}
-        tabIndex={0}
-        onKeyDown={async (e) => {
-          if (sessionInfoQuery.data && sessionInfoQuery.data.finished) {
-            return
-          }
-          if (e.key === 'Backspace') {
-            setWords((prev) => {
-              return prev.slice(0, -1) as LingoRow
-            })
-          }
-
-          if (words.length < 5) {
-            const isAlphabetical = /^[a-zA-Z]$/.test(e.key)
-            if (isAlphabetical) {
-              setWords((prev) => {
-                return [
-                  ...prev,
-                  { ...defaultChar, letter: e.key.toUpperCase() },
-                ].slice(0, 5) as LingoRow
-              })
-            }
-          }
-
-          if (words.length === 5 && e.key === 'Enter') {
-            const res = await guessWordQuery.refetch()
-
-            //console.log(res.data)
-
-            if (
-              res.data &&
-              (('duplicate' in res.data &&
-                typeof res.data.duplicate === 'boolean') ||
-                ('invalid' in res.data &&
-                  typeof res.data.invalid === 'boolean'))
-            ) {
-              setWords([])
-              return
-            }
-
-            await sessionInfoQuery.refetch()
-
-            if (!res.error && res.data) {
-              setHistory((prev) => {
-                return [...prev, res.data as LingoRow]
-              })
-              setWords([])
-            }
-
-            if (res.data && 'message' in res.data && res.data.message) {
-              console.error(res.data.message)
-            }
-          }
-        }}>
+        tabIndex={0}>
         {history &&
           history.map((value, index, array) => {
             return (
@@ -229,13 +179,96 @@ function Game() {
         {sessionInfoQuery.data && !sessionInfoQuery.data.finished && (
           <div className='relative flex gap-x-2 top-5 self-center justify-center select-none'>
             {Array.from({ length: 5 }, (_, i) => (
-              <div key={i} className='inline w-10 h-10 border-2'>
+              <div
+                key={i}
+                className={`inline w-10 h-10 border-2 transition-colors ${
+                  inputFocused
+                    ? 'border-green-500'
+                    : 'border-neutral-500 animate-pulse'
+                }`}>
                 <div className='flex text-center justify-center self-center relative top-1'>
                   {(words[i] && words[i].letter) ?? '.'}
                 </div>
               </div>
             ))}
-            <input className='absolute h-10 opacity-0' type='text'></input>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                console.log('hi')
+                const res = await guessWordQuery.refetch()
+
+                //console.log(res.data)
+
+                if (
+                  res.data &&
+                  (('duplicate' in res.data &&
+                    typeof res.data.duplicate === 'boolean') ||
+                    ('invalid' in res.data &&
+                      typeof res.data.invalid === 'boolean'))
+                ) {
+                  setWords([])
+                  return
+                }
+
+                await sessionInfoQuery.refetch()
+
+                if (!res.error && res.data) {
+                  setHistory((prev) => {
+                    return [...prev, res.data as LingoRow]
+                  })
+                  setWords([])
+                }
+
+                if (res.data && 'message' in res.data && res.data.message) {
+                  console.error(res.data.message)
+                }
+              }}
+              className='absolute opacity-0'>
+              <input
+                autoFocus={true}
+                onFocus={(e) => {
+                  setInputFocused(true)
+                }}
+                onBlur={(e) => {
+                  setInputFocused(false)
+                }}
+                className='h-10'
+                onInput={(e) => {
+                  if (sessionInfoQuery.data && sessionInfoQuery.data.finished) {
+                    return
+                  }
+                  console.log(e)
+                  const event = e.nativeEvent as InputEvent
+
+                  if (event.inputType === 'deleteContentBackward') {
+                    setWords((prev) => {
+                      return prev.slice(0, -1) as LingoRow
+                    })
+                  }
+
+                  const key = event.data
+
+                  if (
+                    key &&
+                    event.inputType === 'insertText' &&
+                    words.length < 5
+                  ) {
+                    const isAlphabetical = /^[a-zA-Z]$/.test(key)
+                    if (isAlphabetical) {
+                      setWords((prev) => {
+                        return [
+                          ...prev,
+                          {
+                            ...defaultChar,
+                            letter: key.toUpperCase(),
+                          },
+                        ].slice(0, 5) as LingoRow
+                      })
+                    }
+                  }
+                }}
+                type='text'></input>
+            </form>
           </div>
         )}
         <div
