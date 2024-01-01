@@ -75,8 +75,6 @@ function Game() {
     }
   }, [router.query])
 
-  const pingQuery = trpc.ping.useQuery(null, { refetchInterval: 3000 })
-
   const guessWordQuery = trpc.guessWord.useQuery(
     { word: words.map((c) => c.letter).join(''), id: gameId ? gameId : '' },
     {
@@ -378,18 +376,6 @@ function Game() {
         ) : (
           <></>
         )}
-        <div>
-          <div
-            className={`w-5 h-5 transition-colors ${
-              pingQuery.isError && pingQuery.error
-                ? 'bg-red-500'
-                : pingQuery.isRefetching || pingQuery.isLoading
-                ? 'bg-yellow-500'
-                : pingQuery.isSuccess
-                ? 'bg-green-500'
-                : 'bg-gray-500'
-            } fixed bottom-0 m-2 rounded-full`}></div>
-        </div>
       </div>
       {confettiVisible && <Confetti />}
     </>

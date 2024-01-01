@@ -13,12 +13,6 @@ import {
 } from '@/util/atoms'
 import Head from 'next/head'
 import meta from '@/data/meta.json'
-import dynamic from 'next/dynamic'
-import chroma from 'chroma-js'
-
-const ColorfulComponent = dynamic(() => import('@/components/Colorful'), {
-  ssr: false,
-})
 
 const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   const router = useRouter()
@@ -28,8 +22,6 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   const [pathHistory, setPathHistory] = useAtom(pathHistoryAtom)
   const [gameSettings, setGameSettings] = useAtom(gameSettingsAtom)
   const [localSettings, setLocalSettings] = useAtom(localSettingsAtom)
-
-  const [colorPickerVisible, setColorPickerVisible] = useState(false)
 
   const createSessionQuery = trpc.createSession.useQuery(
     {
@@ -104,38 +96,14 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
           window.localStorage.setItem('fingerprint', result.visitorId)
         }),
     )
-
-    // const loadFingerprintJS = async () => {
-    //   const fp = await import('@fingerprintjs/fingerprintjs')
-
-    //   const fpInstance = await fp.load()
-    //   const fpRes = await fpInstance.get()
-
-    //   console.log(fpRes.visitorId)
-
-    //   setFingerprint(fpRes.visitorId)
-
-    //   console.log('Loaded Fingerprint JS.')
-    // }
-
-    //loadFingerprintJS()
   }, [])
-
-  useEffect(() => {
-    if (!fingerprint) {
-      //loginQuery.refetch()
-    }
-  }, [fingerprint])
 
   return (
     <SessionProvider session={session}>
       <Provider>
         <Head>
-          <meta
-            name='msapplication-TileColor'
-            content={localSettings.background}
-          />
-          <meta name='theme-color' content={localSettings.background} />
+          <meta name='msapplication-TileColor' content='#171717' />
+          <meta name='theme-color' content='#171717' />
           <meta name='description' content={meta.description} />
           <meta property='og:title' content={meta.title} />
           <meta property='og:description' content={meta.description} />
@@ -151,29 +119,8 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
           <meta name='twitter:description' content={meta.description} />
           <meta name='twitter:image' content={meta.image} />
         </Head>
-        <div
-          style={{
-            color:
-              chroma(localSettings.background).luminance() <= 0.3
-                ? '#fff'
-                : '#000',
-            backgroundColor: localSettings.background,
-          }}
-          className='fixed w-full h-full transition-colors'></div>
+        <div className='fixed w-full h-full transition-colors bg-neutral-900'></div>
         <Component {...pageProps} />
-        <div className='bottom-0 fixed right-0 m-4 flex flex-col'>
-          {colorPickerVisible && localSettings.background && (
-            <>
-              <ColorfulComponent />
-            </>
-          )}
-          <button
-            onClick={() => {
-              setColorPickerVisible((prev) => !prev)
-            }}>
-            Icon placeholder
-          </button>
-        </div>
       </Provider>
     </SessionProvider>
   )
