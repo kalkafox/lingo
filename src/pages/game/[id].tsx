@@ -163,7 +163,7 @@ function Game() {
                       className={`inline w-10 h-10 border-2 ${
                         (v.correct && 'bg-green-500/80') ||
                         (v.oop && 'bg-yellow-500/80') ||
-                        (v.invalid && 'bg-gray-500')
+                        (v.invalid && 'bg-neutral-500')
                       }`}>
                       <div className='flex text-center justify-center self-center relative top-1'>
                         {(v && v.letter) ?? '.'}
@@ -290,7 +290,7 @@ function Game() {
           <div
             className={`relative flex flex-col gap-y-2 text-center self-center justify-center items-center select-none ${inter.className}`}>
             {definitionQuery.data && definitionQuery.data[0] && (
-              <div className='bg-gray-700 p-2 rounded-lg w-80'>
+              <div className='bg-neutral-700 p-2 rounded-lg w-80'>
                 <div>
                   {
                     definitionQuery.data[0].meanings[0].definitions[0]
@@ -354,7 +354,7 @@ function Game() {
                 {createSessionQuery.isRefetching ? (
                   <svg
                     aria-hidden='true'
-                    className='w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-neutral-100'
+                    className='w-8 h-8 text-neutral-200 animate-spin dark:text-neutral-600 fill-neutral-100'
                     viewBox='0 0 100 101'
                     fill='none'
                     xmlns='http://www.w3.org/2000/svg'>
