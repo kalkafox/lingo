@@ -9,14 +9,6 @@ export default function Confetti({
 }: {
   finished: number | null | undefined
 }) {
-  if (!finished) return
-  console.log(finished)
-  const now = Date.now()
-
-  console.log(now - finished)
-
-  if (now - finished >= 5000) return
-
   const refAnimationInstance = useRef<HTMLCanvasElement>(null)
 
   // @ts-ignore
@@ -66,6 +58,14 @@ export default function Confetti({
       startVelocity: 45,
     })
   }, [makeShot])
+
+  if (!finished) return
+  console.log(finished)
+  const now = Date.now()
+
+  console.log(now - finished)
+
+  if (now - finished >= 5000) return
 
   return (
     <ReactCanvasConfetti
