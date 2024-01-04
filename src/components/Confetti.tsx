@@ -1,8 +1,22 @@
+import { confettiVisibleAtom } from '@/util/atoms'
+import { useAtom } from 'jotai'
 import { useCallback, useEffect, useRef } from 'react'
 
 import ReactCanvasConfetti from 'react-canvas-confetti'
 
-export default function Confetti() {
+export default function Confetti({
+  finished,
+}: {
+  finished: number | null | undefined
+}) {
+  if (!finished) return
+  console.log(finished)
+  const now = Date.now()
+
+  console.log(now - finished)
+
+  if (now - finished >= 5000) return
+
   const refAnimationInstance = useRef<HTMLCanvasElement>(null)
 
   // @ts-ignore

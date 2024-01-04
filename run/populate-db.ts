@@ -1,7 +1,8 @@
+import Papa from 'papaparse'
 import { drizzle } from 'drizzle-orm/mysql2'
 import mysql from 'mysql2/promise'
-import { config } from '@/db/config'
-import * as schema from '@/db/schema'
+import { config } from '../src/db/config'
+import * as schema from '../src/db/schema'
 
 const connection = mysql.createPool(config)
 
@@ -15,15 +16,23 @@ const words = (await file.text()).split('\n').filter((w) => w.length != 0)
 
 console.log(`Counted ${words.length} words.`)
 
-const jobs = []
+const profanity_res = await fetch(
+  'https://raw.githubusercontent.com/surge-ai/profanity/main/profanity_en.csv',
+)
 
-for (const word of words) {
-  jobs.push(
-    db.insert(schema.lingoWords).values({
-      word,
-    }),
-  )
-}
+const profanityParsed = Papa.parse<string[]>(await profanity_res.text())
+
+const profanityHeader = profanityParsed.data.shift()!
+
+const badWords = profanityParsed.data.map((l) => l[0])
+
+const filtered = words.filter((w) => !badWords.includes(w))
+
+console.log(`Filtered ${profanityParsed.data.length - filtered.length} words`)
+
+const jobs = filtered.map((w) =>
+  db.insert(schema.lingoWords).values({ word: w }),
+)
 
 await Promise.all(jobs)
 

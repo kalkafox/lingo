@@ -8,66 +8,37 @@ import { useRouter } from 'next/router'
 import {
   fingerprintAtom,
   gameSettingsAtom,
-  localSettingsAtom,
   pathHistoryAtom,
 } from '@/util/atoms'
 import Head from 'next/head'
 import meta from '@/data/meta.json'
+import { useCreateSession, useSessionInfo } from '@/util/hooks'
+import Confetti from '@/components/Confetti'
 
 const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   const router = useRouter()
-  const gameId = router.query.id
+  const gameId = router.query.id as string
 
   const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
   const [pathHistory, setPathHistory] = useAtom(pathHistoryAtom)
   const [gameSettings, setGameSettings] = useAtom(gameSettingsAtom)
-  const [localSettings, setLocalSettings] = useAtom(localSettingsAtom)
 
-  const createSessionQuery = trpc.createSession.useQuery(
-    {
-      fingerprint,
-      settings: gameSettings,
-    },
-    {
-      enabled: false,
-    },
-  )
-
-  useEffect(() => {
-    // stupid hack
-    const getBackground = () => {
-      if (window.localStorage.getItem('background')) {
-        setLocalSettings({
-          background: window.localStorage.getItem('background')!,
-        })
-      }
-    }
-
-    const interval = setInterval(() => {
-      getBackground()
-    }, 500)
-
-    getBackground()
-
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    console.log(localSettings)
-  }, [localSettings])
+  const createSession = useCreateSession({ fingerprint, gameSettings })
 
   useEffect(() => {
     if (router.asPath === '/game') {
-      const createSession = async () => {
+      const doCreateSession = async () => {
         if (fingerprint && fingerprint !== '') {
           if (!gameId || gameId.length === 0) {
             //console.log(pathHistory)
             if (pathHistory.find((l) => l === router.asPath)) {
               return
             }
-            const res = await createSessionQuery.refetch()
+            const res = await createSession.refetch()
 
-            //console.log(router.asPath)
+            if (!res.data || res.error) {
+              return
+            }
 
             setPathHistory((prev) => [...prev, router.asPath])
 
@@ -76,7 +47,7 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
         }
       }
 
-      createSession()
+      doCreateSession()
     }
   }, [router.asPath, fingerprint])
 
@@ -119,7 +90,7 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
           <meta name='twitter:description' content={meta.description} />
           <meta name='twitter:image' content={meta.image} />
         </Head>
-        <div className='fixed w-full h-full transition-colors bg-neutral-900'></div>
+        <div className='fixed w-full h-full transition-colors bg-neutral-900' />
         <Component {...pageProps} />
       </Provider>
     </SessionProvider>

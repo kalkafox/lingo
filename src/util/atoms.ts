@@ -1,4 +1,10 @@
-import { LingoRow, LingoRows, LocalSettings, Settings } from '@/types/lingo'
+import type {
+  GuessedLingoRow,
+  LingoRow,
+  LingoRows,
+  LocalSettings,
+  Settings,
+} from '@/types/lingo'
 import { atom } from 'jotai'
 
 // LingoRows instance
@@ -11,9 +17,7 @@ export const gameSettingsAtom = atom<Settings>({
   firstLetter: true,
 })
 
-export const localSettingsAtom = atom<LocalSettings>({
-  background: '#000',
-})
+export const guessedLingoAtom = atom<GuessedLingoRow>([])
 
 export const confettiVisibleAtom = atom(false)
 
