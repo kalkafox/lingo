@@ -28,8 +28,6 @@ export default function Confetti({
       })
   }, [])
 
-  useEffect(() => fire(), [])
-
   const fire = useCallback(() => {
     makeShot(0.25, {
       spread: 26,
@@ -59,13 +57,17 @@ export default function Confetti({
     })
   }, [makeShot])
 
-  if (!finished) return
-  console.log(finished)
-  const now = Date.now()
+  useEffect(() => {
+    if (!finished) return
+    console.log(finished)
+    const now = Date.now()
 
-  console.log(now - finished)
+    console.log(now - finished)
 
-  if (now - finished >= 5000) return
+    if (now - finished >= 5000) return
+
+    fire()
+  }, [finished])
 
   return (
     <ReactCanvasConfetti
