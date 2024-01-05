@@ -1,4 +1,4 @@
-import Confetti from '@/components/Confetti'
+import Confetti from '@/components/confetti'
 import { GuessedLingoRow, LingoRow, LingoRows, Settings } from '@/types/lingo'
 import {
   confettiVisibleAtom,
@@ -19,8 +19,8 @@ import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 import { animated, useSpring } from '@react-spring/web'
 import { Icon } from '@iconify/react'
-import { LoadingSpinner } from '@/components/Helpers'
-import { NewGame } from '@/components/Buttons'
+import { LoadingSpinner } from '@/components/helpers'
+import { NewGame } from '@/components/buttons'
 
 function Game() {
   const router = useRouter()
@@ -57,27 +57,36 @@ function Game() {
 }
 
 function useClipboardSpring() {
-  return useSpring(() => ({
-    y: 0,
-    opacity: 0,
-    display: 'none',
-  }))
+  const clipboardSpring = useSpring({ y: 0, opacity: 0, display: 'none' })
+  const interpolateClipboardOpacity = clipboardSpring.opacity.to(
+    [0, 0.25, 0.5, 0.75, 1],
+    [0, 0.5, 1, 0.5, 0],
+  )
+
+  const animateClipboard = async () => {
+    navigator.clipboard.writeText(window.location.href)
+    if (clipboardSpring.y.isAnimating) {
+      clipboardSpring.opacity.set(0)
+      clipboardSpring.y.set(0)
+    }
+    clipboardSpring.display.set('inline')
+    clipboardSpring.opacity.start(1)
+    await clipboardSpring.y.start(-20)
+    if (clipboardSpring.y.isAnimating) return
+    clipboardSpring.y.set(0)
+    clipboardSpring.opacity.set(0)
+    clipboardSpring.display.set('none')
+  }
+
+  return { clipboardSpring, interpolateClipboardOpacity, animateClipboard }
 }
 
 function Results({ gameId }: { gameId: string }) {
   const { status } = useSession()
-
-  const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
-  const [gameSettings, setGameSettings] = useAtom(gameSettingsAtom)
   const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
   const [history, setHistory] = useAtom(lingoHistoryAtom)
-
-  const [clipboardSpring, clipboardSpringApi] = useClipboardSpring()
-
-  const interpolateOpacity = clipboardSpring.opacity.to(
-    [0, 0.25, 0.5, 0.75, 1],
-    [0, 0.5, 1, 0.5, 0],
-  )
+  const { clipboardSpring, interpolateClipboardOpacity, animateClipboard } =
+    useClipboardSpring()
 
   const sessionInfo = useSessionInfo({ gameId })
 
@@ -118,25 +127,25 @@ function Results({ gameId }: { gameId: string }) {
     !sessionInfo ||
     !sessionInfo.data ||
     !sessionInfo.data.finished ||
-    !sessionInfo.data.word
+    !sessionInfo.data.word ||
+    !guessedWords
   )
     return (
       <div
         className={`relative flex gap-x-2 my-8 self-center justify-center select-none`}>
-        {guessedWords &&
-          guessedWords.map((value, index, array) => {
-            return (
-              <div
-                key={index}
-                className={`inline w-10 h-10 border-2 ${
-                  value.correct && 'bg-green-500/80'
-                }`}>
-                <div className='flex text-center justify-center self-center relative top-1'>
-                  {(value && value.letter) ?? '.'}
-                </div>
+        {guessedWords.map((value, index, array) => {
+          return (
+            <div
+              key={index}
+              className={`inline w-10 h-10 border-2 ${
+                value.correct && 'bg-green-500/80'
+              }`}>
+              <div className='flex text-center justify-center self-center relative top-1'>
+                {(value && value.letter) ?? '.'}
               </div>
-            )
-          })}
+            </div>
+          )
+        })}
       </div>
     )
 
@@ -145,58 +154,51 @@ function Results({ gameId }: { gameId: string }) {
       <div
         className={`relative flex flex-col my-8 gap-y-2 text-center self-center justify-center items-center select-none ${inter.className}`}>
         {definition.data && definition.data[0] && (
-          <div className='bg-neutral-700 p-2 rounded-lg w-80'>
-            <div>
+          <div className='bg-neutral-700/50 p-2 rounded-lg'>
+            <div className='w-80'>
               {definition.data[0].meanings[0].definitions[0].definition}
+            </div>
+            <div className=''>
+              Finished in {sessionInfo.data.finished - sessionInfo.data.created}
+              ms by{' '}
+              {sessionInfo.data.owner
+                ? sessionInfo.data.owner.name
+                : 'anonymous'}
+              <animated.div
+                style={{
+                  ...clipboardSpring,
+                  opacity: interpolateClipboardOpacity,
+                }}
+                className='absolute inline right-0'>
+                <Icon
+                  className='inline -my-[0.5pt] mx-1 text-green-500'
+                  icon='mdi:check-bold'
+                  inline={true}
+                />
+              </animated.div>
+              {sessionInfo.data.owner && (
+                <Image
+                  className={'inline mx-2 rounded-lg'}
+                  src={sessionInfo.data.owner.image!}
+                  width={20}
+                  height={20}
+                  alt={'owner_avatar'}
+                />
+              )}
+              <button onClick={animateClipboard}>
+                <Icon
+                  className='inline -my-[0.5pt] mx-1'
+                  icon='octicon:share-16'
+                  inline={true}
+                />
+              </button>
+            </div>
+            <div className='gap-x-2 flex justify-center'>
+              <ClaimButton gameId={gameId} status={status} />
+              <NewGame />
             </div>
           </div>
         )}
-        <div>
-          Finished in {sessionInfo.data.finished - sessionInfo.data.created}
-          ms by{' '}
-          {sessionInfo.data.owner ? sessionInfo.data.owner.name : 'anonymous'}
-          <animated.div
-            style={{ ...clipboardSpring, opacity: interpolateOpacity }}
-            className='absolute inline right-0'>
-            <Icon
-              className='inline -my-[0.5pt] mx-1 text-green-500'
-              icon='mdi:check-bold'
-              inline={true}
-            />
-          </animated.div>
-          <button
-            onClick={async () => {
-              navigator.clipboard.writeText(window.location.href)
-              if (clipboardSpring.y.isAnimating) {
-                clipboardSpring.opacity.set(0)
-                clipboardSpring.y.set(0)
-              }
-              clipboardSpring.display.set('inline')
-              clipboardSpring.opacity.start(1)
-              await clipboardSpring.y.start(-20)
-              if (clipboardSpring.y.isAnimating) return
-              clipboardSpring.y.set(0)
-              clipboardSpring.opacity.set(0)
-              clipboardSpring.display.set('none')
-            }}>
-            <Icon
-              className='inline -my-[0.5pt] mx-1'
-              icon='octicon:share-16'
-              inline={true}
-            />
-          </button>
-          {sessionInfo.data.owner && (
-            <Image
-              className={'inline mx-2 rounded-lg'}
-              src={sessionInfo.data.owner.image!}
-              width={20}
-              height={20}
-              alt={'owner_avatar'}
-            />
-          )}
-        </div>
-        <ClaimButton gameId={gameId} status={status} />
-        <NewGame />
         {/* {!sessionInfo.data.owner &&
               sessionInfo.data.fingerprint &&
               sessionInfo.data.fingerprint === fingerprint && (

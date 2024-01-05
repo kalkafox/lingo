@@ -2,8 +2,15 @@ import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import { Provider, useAtom } from 'jotai'
 import { trpc } from '@/util/trpc'
-import { useEffect, useState } from 'react'
-import { SessionProvider } from 'next-auth/react'
+import {
+  Dispatch,
+  HTMLAttributes,
+  SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+import { SessionProvider, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import {
   fingerprintAtom,
@@ -12,8 +19,30 @@ import {
 } from '@/util/atoms'
 import Head from 'next/head'
 import meta from '@/data/meta.json'
-import { useCreateSession, useSessionInfo } from '@/util/hooks'
-import Confetti from '@/components/Confetti'
+import { useCreateSession } from '@/util/hooks'
+import {
+  SpringProps,
+  SpringValue,
+  animated,
+  useSpring,
+} from '@react-spring/web'
+import { Icon } from '@iconify/react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import greetings from '@/data/greetings'
 
 const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   const router = useRouter()
@@ -69,6 +98,17 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
     )
   }, [])
 
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  const { settingsSpring, zoomSpring } = useSettingsSpring()
+
+  useEffect(() => {
+    console.log(settingsOpen)
+    zoomSpring.scale.start(settingsOpen ? 0.95 : 1)
+    settingsSpring.opacity.start(settingsOpen ? 1 : 0)
+    settingsSpring.scale.start(settingsOpen ? 1 : 0.95)
+  }, [settingsOpen])
+
   return (
     <SessionProvider session={session}>
       <Provider>
@@ -91,10 +131,125 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
           <meta name='twitter:image' content={meta.image} />
         </Head>
         <div className='fixed w-full h-full transition-colors bg-neutral-900' />
-        <Component {...pageProps} />
+        <div className='fixed bottom-0'>
+          <Profile setOpen={setSettingsOpen} />
+        </div>
+        <animated.div style={zoomSpring}>
+          <Component {...pageProps} />
+        </animated.div>
+        <animated.div
+          style={settingsSpring}
+          className='fixed top-0 w-full h-full items-center flex justify-center transition-colors bg-neutral-900/20 backdrop-blur-sm'>
+          <Settings setOpen={setSettingsOpen} />
+        </animated.div>
       </Provider>
     </SessionProvider>
   )
+}
+
+function processGreeting(name: string | null | undefined) {
+  const greeting = greetings[Math.floor(Math.random() * greetings.length)]
+
+  const suffix = greeting.endsWith('?') ? '?' : '!'
+
+  console.log(name)
+
+  return `${greeting.replace(/[?!]$/, '')}${name ? `, ${name}` : ''}${suffix}`
+}
+
+function Profile({ setOpen }: { setOpen: Dispatch<SetStateAction<boolean>> }) {
+  const session = useSession()
+
+  const [greeting, setGreeting] = useState('ur gay')
+
+  const dropdownRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const sessionName = session.data?.user?.name
+
+    setGreeting(processGreeting(sessionName))
+  }, [session.status, dropdownRef.current])
+
+  return (
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (!open) return
+        setGreeting(processGreeting(session.data?.user?.name))
+      }}>
+      <DropdownMenuTrigger className='outline-none'>
+        <Icon className='text-4xl m-2' icon='mdi:user' />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuLabel>{greeting}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={(e) => setOpen(true)}>
+          <Icon className='text-lg' icon='mdi:gear' />
+          <div className='mx-2'>Settings</div>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function Settings({ setOpen }: { setOpen: Dispatch<SetStateAction<boolean>> }) {
+  return (
+    <div className='bg-neutral-800 border-2 border-neutral-300 text-neutral-300 p-2 rounded-lg'>
+      <div className='flex justify-end items-end left-1 bottom-1 relative'>
+        <button onClick={() => setOpen(false)}>
+          <Icon icon='carbon:close-outline' />
+        </button>
+      </div>
+      {/* <div className='flex justify-center items-center gap-x-1'>
+          <Icon icon='mdi:gear' className='inline' />
+          <div>Settings</div>
+        </div> file-icons:font-outline*/}
+      <div>
+        <Select>
+          <SelectTrigger className='w-[180px]'>
+            <Icon className='text-2xl' icon='file-icons:font-outline' />
+            <SelectValue placeholder='Theme' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='light'>Light</SelectItem>
+            <SelectItem value='dark'>Dark</SelectItem>
+            <SelectItem value='system'>System</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+}
+
+function useSettingsSpring() {
+  const zoomSpring = useSpring({
+    from: {
+      scale: 1,
+    },
+  })
+
+  const settingsSpring = useSpring({
+    from: {
+      display: 'none',
+      opacity: 0,
+      scale: 0.95,
+    },
+    onStart: (e, ctrl) => {
+      if (e.value.opacity < 1) {
+        ctrl.set({
+          display: '',
+        })
+      }
+    },
+    onRest: (e, ctrl) => {
+      if (e.value.opacity < 0.1) {
+        ctrl.set({
+          display: 'none',
+        })
+      }
+    },
+  })
+
+  return { zoomSpring, settingsSpring }
 }
 
 export default trpc.withTRPC(App)

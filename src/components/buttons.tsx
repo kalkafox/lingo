@@ -7,7 +7,7 @@ import {
 import { useCreateSession } from '@/util/hooks'
 import { useAtom } from 'jotai'
 import { useRouter } from 'next/router'
-import { LoadingSpinner } from './Helpers'
+import { LoadingSpinner } from './helpers'
 
 export const NewGame = () => {
   const router = useRouter()
@@ -40,7 +40,7 @@ export const NewGame = () => {
       {createSession.isRefetching || createSession.isFetching ? (
         <LoadingSpinner />
       ) : (
-        'Start new game'
+        'New game'
       )}
     </button>
   )

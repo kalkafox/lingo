@@ -11,7 +11,8 @@ import {
 import { trpc } from '@/util/trpc'
 import { defaultChar } from '@/util/defaults'
 import { useRouter } from 'next/router'
-import { NewGame } from '@/components/Buttons'
+import { NewGame } from '@/components/buttons'
+import Markdown from 'react-markdown'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -36,11 +37,13 @@ export default function Home() {
 
   console.log(fingerprint)
 
+  const markdown = `
+  # hi!
+  `
+
   return (
     <div className='relative'>
-      <h1>Lingo (on the web!)</h1>
-      <p>Work in progress</p>
-      <NewGame />
+      <Markdown>{markdown}</Markdown>
     </div>
   )
 }
