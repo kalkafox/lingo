@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { procedure, protectedProcedure, router } from '../trpc'
-import { Char, Letter, LingoRow, LingoRows } from '@/types/lingo'
+import type { Char, Letter, LingoRow, LingoRows } from '@/types/lingo'
 import { defaultChar } from '@/util/defaults'
 import { eq, gte, max, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
@@ -20,7 +20,7 @@ export const appRouter = router({
         }),
       }),
     )
-    .query(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       const wordsCount = await db
         .select({
           id: schema.lingoWordsV2.id,
@@ -96,7 +96,7 @@ export const appRouter = router({
 
       return uniqueId
     }),
-  claimSession: protectedProcedure.input(z.string()).query(async (q) => {
+  claimSession: protectedProcedure.input(z.string()).mutation(async (q) => {
     //console.log(q.ctx.session.user.name)
 
     const session = await db.query.lingoSessions.findFirst({
@@ -194,8 +194,8 @@ export const appRouter = router({
   guessWord: procedure
     .input(
       z.object({
-        word: z.string().max(255),
-        id: z.string(),
+        word: z.string().max(255).toUpperCase(),
+        id: z.string().max(10),
       }),
     )
     .mutation(async (q) => {
@@ -225,6 +225,10 @@ export const appRouter = router({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Word not found somehow',
         })
+      }
+
+      if (q.input.word.length > session.wordId.word.length) {
+        return { invalid: true }
       }
 
       console.log(session.wordId)

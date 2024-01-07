@@ -8,8 +8,12 @@ import { useCreateSession } from '@/util/hooks'
 import { useAtom } from 'jotai'
 import { useRouter } from 'next/router'
 import { LoadingSpinner } from './helpers'
+import { SpringValue } from '@react-spring/web'
 
-export const NewGame = () => {
+export const NewGame = (lingoSpring: {
+  x: SpringValue<number>
+  opacity: SpringValue<number>
+}) => {
   const router = useRouter()
 
   const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
@@ -20,7 +24,7 @@ export const NewGame = () => {
 
   const [history, setHistory] = useAtom(lingoHistoryAtom)
 
-  const createSession = useCreateSession({ fingerprint, gameSettings })
+  const createSession = useCreateSession()
 
   return (
     <button
@@ -28,20 +32,25 @@ export const NewGame = () => {
         //console.log(fingerprint)
         if (fingerprint && fingerprint !== '') {
           console.log('lol')
-          const res = await createSession.refetch()
+          lingoSpring.x.start(-90)
+          lingoSpring.opacity.start(0)
+          const res = await createSession.mutateAsync({
+            fingerprint,
+            settings: {
+              firstLetter: true,
+            },
+          })
+          lingoSpring.opacity.set(0)
+          lingoSpring.x.set(95)
           setGuessedWords([])
           setHistory([])
           //setConfettiVisible(false)
 
-          router.push(`/game/${res.data}`)
+          router.push(`/game/${res}`)
         }
       }}
       className={`bg-neutral-700 p-2 rounded-lg`}>
-      {createSession.isRefetching || createSession.isFetching ? (
-        <LoadingSpinner />
-      ) : (
-        'New game'
-      )}
+      {createSession.isLoading ? <LoadingSpinner /> : 'New game'}
     </button>
   )
 }

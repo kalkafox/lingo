@@ -1,3 +1,5 @@
+import { useCreateSession, useSessionInfo } from '@/util/hooks'
+
 export const LoadingSpinner = () => (
   <svg
     aria-hidden='true'
@@ -15,3 +17,19 @@ export const LoadingSpinner = () => (
     />
   </svg>
 )
+
+export const Loader = () => {
+  const createSession = useCreateSession()
+  const sessionInfo = useSessionInfo()
+
+  if (
+    createSession.isLoading ||
+    sessionInfo.isRefetching ||
+    sessionInfo.isFetching
+  )
+    return (
+      <div className='relative flex flex-col items-center self-center justify-center select-none'>
+        <LoadingSpinner />
+      </div>
+    )
+}

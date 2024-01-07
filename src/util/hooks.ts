@@ -1,28 +1,17 @@
-import { Settings } from '@/types/lingo'
 import { trpc } from './trpc'
+import { useAtomValue } from 'jotai'
+import { gameAtom } from './atoms'
 
-export function useCreateSession({
-  fingerprint,
-  gameSettings,
-}: {
-  fingerprint: string | undefined
-  gameSettings: Settings
-}) {
-  return trpc.createSession.useQuery(
-    {
-      fingerprint,
-      settings: gameSettings,
-    },
-    {
-      enabled: false,
-    },
-  )
+export function useCreateSession() {
+  return trpc.createSession.useMutation()
 }
 
-export function useSessionInfo({ gameId }: { gameId: string }) {
+export function useSessionInfo() {
+  const { gameId } = useAtomValue(gameAtom)
+
   return trpc.getSessionInfo.useQuery(
     {
-      id: gameId,
+      id: gameId as string,
     },
     {
       enabled: false,

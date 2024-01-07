@@ -12,6 +12,10 @@ export interface LocalSettings {
   background: string
 }
 
+export interface LingoState {
+  gameId: string | undefined | null
+}
+
 export interface Char {
   letter: Letter
   correct: boolean

@@ -2,30 +2,19 @@ import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
 import { Provider, useAtom } from 'jotai'
 import { trpc } from '@/util/trpc'
-import {
-  Dispatch,
-  HTMLAttributes,
-  SetStateAction,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SessionProvider, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import {
   fingerprintAtom,
-  gameSettingsAtom,
+  gameAtom,
   pathHistoryAtom,
+  settingsOpenAtom,
 } from '@/util/atoms'
 import Head from 'next/head'
 import meta from '@/data/meta.json'
 import { useCreateSession } from '@/util/hooks'
-import {
-  SpringProps,
-  SpringValue,
-  animated,
-  useSpring,
-} from '@react-spring/web'
+import { SpringValue, animated, useSpring } from '@react-spring/web'
 import { Icon } from '@iconify/react'
 import {
   Select,
@@ -43,71 +32,67 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import greetings from '@/data/greetings'
+import { Loader } from '@/components/helpers'
+import Image from 'next/image'
 
 const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   const router = useRouter()
-  const gameId = router.query.id as string
+
+  const [pathHistory, setPathHistory] = useAtom(pathHistoryAtom)
+  const [settingsOpen, setSettingsOpen] = useAtom(settingsOpenAtom)
+  const [game, setGame] = useAtom(gameAtom)
+
+  const createSession = useCreateSession()
 
   const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
-  const [pathHistory, setPathHistory] = useAtom(pathHistoryAtom)
-  const [gameSettings, setGameSettings] = useAtom(gameSettingsAtom)
 
-  const createSession = useCreateSession({ fingerprint, gameSettings })
+  useEffect(() => {
+    if (fingerprint) return
+
+    const getFingerprint = async () => {
+      const fp = await import('@fingerprintjs/fingerprintjs')
+
+      const inst = await fp.load()
+      const result = await inst.get()
+
+      setFingerprint(result.visitorId)
+    }
+
+    getFingerprint()
+  }, [fingerprint])
 
   useEffect(() => {
     if (router.asPath === '/game') {
       const doCreateSession = async () => {
-        if (fingerprint && fingerprint !== '') {
-          if (!gameId || gameId.length === 0) {
-            //console.log(pathHistory)
-            if (pathHistory.find((l) => l === router.asPath)) {
-              return
-            }
-            const res = await createSession.refetch()
-
-            if (!res.data || res.error) {
-              return
-            }
-
-            setPathHistory((prev) => [...prev, router.asPath])
-
-            router.push(`/game/${res.data}`)
+        if (!game.gameId || game.gameId.length === 0) {
+          //console.log(pathHistory)
+          if (pathHistory.find((l) => l === router.asPath)) {
+            return
           }
+          const res = await createSession.mutateAsync({
+            fingerprint: fingerprint,
+            settings: {
+              firstLetter: true,
+            },
+          })
+
+          setPathHistory((prev) => [...prev, router.asPath])
+
+          setGame({ ...game, gameId: res })
+
+          router.push(`/game/${res}`)
         }
       }
 
       doCreateSession()
     }
-  }, [router.asPath, fingerprint])
+  }, [router.asPath, game])
 
-  useEffect(() => {
-    if (window.localStorage.getItem('fingerprint')) {
-      setFingerprint(window.localStorage.getItem('fingerprint') as string)
-      return
-    }
-    const fpPromise = import('@fingerprintjs/fingerprintjs')
-
-    fpPromise.then((t) =>
-      t
-        .load()
-        .then((inst) => inst.get())
-        .then((result) => {
-          setFingerprint(result.visitorId)
-          window.localStorage.setItem('fingerprint', result.visitorId)
-        }),
-    )
-  }, [])
-
-  const [settingsOpen, setSettingsOpen] = useState(false)
-
-  const { settingsSpring, zoomSpring } = useSettingsSpring()
-
-  useEffect(() => {
-    console.log(settingsOpen)
-    zoomSpring.scale.start(settingsOpen ? 0.95 : 1)
-    settingsSpring.opacity.start(settingsOpen ? 1 : 0)
-    settingsSpring.scale.start(settingsOpen ? 1 : 0.95)
-  }, [settingsOpen])
+  const zoomSpring = useSpring({
+    from: {
+      scale: 1,
+    },
+  })
 
   return (
     <SessionProvider session={session}>
@@ -130,18 +115,15 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
           <meta name='twitter:description' content={meta.description} />
           <meta name='twitter:image' content={meta.image} />
         </Head>
-        <div className='fixed w-full h-full transition-colors bg-neutral-900' />
+        <div className='fixed w-full h-full transition-colors connections' />
         <div className='fixed bottom-0'>
-          <Profile setOpen={setSettingsOpen} />
+          <Profile />
         </div>
         <animated.div style={zoomSpring}>
           <Component {...pageProps} />
         </animated.div>
-        <animated.div
-          style={settingsSpring}
-          className='fixed top-0 w-full h-full items-center flex justify-center transition-colors bg-neutral-900/20 backdrop-blur-sm'>
-          <Settings setOpen={setSettingsOpen} />
-        </animated.div>
+        <Loader />
+        <Settings zoom={zoomSpring} />
       </Provider>
     </SessionProvider>
   )
@@ -152,12 +134,11 @@ function processGreeting(name: string | null | undefined) {
 
   const suffix = greeting.endsWith('?') ? '?' : '!'
 
-  console.log(name)
-
   return `${greeting.replace(/[?!]$/, '')}${name ? `, ${name}` : ''}${suffix}`
 }
 
-function Profile({ setOpen }: { setOpen: Dispatch<SetStateAction<boolean>> }) {
+function Profile() {
+  const [open, setOpen] = useAtom(settingsOpenAtom)
   const session = useSession()
 
   const [greeting, setGreeting] = useState('ur gay')
@@ -177,9 +158,19 @@ function Profile({ setOpen }: { setOpen: Dispatch<SetStateAction<boolean>> }) {
         setGreeting(processGreeting(session.data?.user?.name))
       }}>
       <DropdownMenuTrigger className='outline-none'>
-        <Icon className='text-4xl m-2' icon='mdi:user' />
+        {session.status === 'authenticated' ? (
+          <Image
+            className={'inline mx-2 rounded-lg'}
+            src={session.data?.user?.name!}
+            width={64}
+            height={64}
+            alt={'owner_avatar'}
+          />
+        ) : (
+          <Icon className='text-4xl m-2' icon='mdi:user' />
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent className='bg-neutral-900/20 hexagon'>
         <DropdownMenuLabel>{greeting}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={(e) => setOpen(true)}>
@@ -191,47 +182,13 @@ function Profile({ setOpen }: { setOpen: Dispatch<SetStateAction<boolean>> }) {
   )
 }
 
-function Settings({ setOpen }: { setOpen: Dispatch<SetStateAction<boolean>> }) {
-  return (
-    <div className='bg-neutral-800 border-2 border-neutral-300 text-neutral-300 p-2 rounded-lg'>
-      <div className='flex justify-end items-end left-1 bottom-1 relative'>
-        <button onClick={() => setOpen(false)}>
-          <Icon icon='carbon:close-outline' />
-        </button>
-      </div>
-      {/* <div className='flex justify-center items-center gap-x-1'>
-          <Icon icon='mdi:gear' className='inline' />
-          <div>Settings</div>
-        </div> file-icons:font-outline*/}
-      <div>
-        <Select>
-          <SelectTrigger className='w-[180px]'>
-            <Icon className='text-2xl' icon='file-icons:font-outline' />
-            <SelectValue placeholder='Theme' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='light'>Light</SelectItem>
-            <SelectItem value='dark'>Dark</SelectItem>
-            <SelectItem value='system'>System</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-  )
-}
-
-function useSettingsSpring() {
-  const zoomSpring = useSpring({
-    from: {
-      scale: 1,
-    },
-  })
-
+function Settings({ zoom }: { zoom: { scale: SpringValue<number> } }) {
+  const [open, setOpen] = useAtom(settingsOpenAtom)
   const settingsSpring = useSpring({
     from: {
       display: 'none',
       opacity: 0,
-      scale: 0.95,
+      scale: 1,
     },
     onStart: (e, ctrl) => {
       if (e.value.opacity < 1) {
@@ -249,7 +206,57 @@ function useSettingsSpring() {
     },
   })
 
-  return { zoomSpring, settingsSpring }
+  const cogSpring = useSpring({ x: 0, y: 0 })
+
+  const settingWindowSpring = useSpring({
+    scale: 0.95,
+  })
+
+  useEffect(() => {
+    settingWindowSpring.scale.start(open ? 1 : 0.95)
+    settingsSpring.opacity.start(open ? 1 : 0)
+    zoom.scale.start(open ? 0.95 : 1)
+  }, [open])
+
+  return (
+    <animated.div
+      onMouseMove={(e) => {
+        cogSpring.x.start(-e.clientX * 0.01)
+        cogSpring.y.start(-e.clientY * 0.01)
+      }}
+      style={settingsSpring}
+      className='fixed top-0 w-full h-full items-center flex justify-center transition-colors bg-neutral-900/20 backdrop-blur-md'>
+      <animated.div
+        style={cogSpring}
+        className='fixed w-[110%] h-[110%] cogs -z-10'></animated.div>
+      <animated.div
+        style={settingWindowSpring}
+        className='bg-neutral-800 border-1 hexagon border-neutral-300 text-neutral-300 p-2 rounded-lg'>
+        <div className='flex justify-end items-end left-1 bottom-1 relative'>
+          <button onClick={() => setOpen(false)}>
+            <Icon icon='carbon:close-outline' />
+          </button>
+        </div>
+        {/* <div className='flex justify-center items-center gap-x-1'>
+          <Icon icon='mdi:gear' className='inline' />
+          <div>Settings</div>
+        </div> file-icons:font-outline*/}
+        <div>
+          <Select>
+            <SelectTrigger className='w-[180px]'>
+              <Icon className='text-2xl' icon='file-icons:font-outline' />
+              <SelectValue placeholder='Theme' />
+            </SelectTrigger>
+            <SelectContent className='hover:[hexagon]'>
+              <SelectItem value='light'>Light</SelectItem>
+              <SelectItem value='dark'>Dark</SelectItem>
+              <SelectItem value='system'>System</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </animated.div>
+    </animated.div>
+  )
 }
 
 export default trpc.withTRPC(App)
