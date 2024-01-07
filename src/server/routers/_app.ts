@@ -263,18 +263,17 @@ export const appRouter = router({
       console.log(wordCheck)
 
       if (!wordCheck || wordCheck.word.length === 0) {
+        if (!inputWordData || inputWordData.word.length === 0) {
+          // const result = inputLetters.map((c) => {
+          //   return {
+          //     ...defaultChar,
+          //     letter: c,
+          //     // todo: refactor this
+          //     invalid: true,
+          //   } as Char
+          if (!wordCheck) return { invalid: true }
+        }
         return { invalid: true }
-      }
-
-      if (!inputWordData || inputWordData.word.length === 0) {
-        // const result = inputLetters.map((c) => {
-        //   return {
-        //     ...defaultChar,
-        //     letter: c,
-        //     // todo: refactor this
-        //     invalid: true,
-        //   } as Char
-        if (!wordCheck) return { invalid: true }
       }
 
       // let history = session.history
