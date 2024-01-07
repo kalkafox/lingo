@@ -273,7 +273,6 @@ export const appRouter = router({
           //   } as Char
           if (!wordCheck) return { invalid: true }
         }
-        return { invalid: true }
       }
 
       // let history = session.history
