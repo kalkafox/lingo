@@ -207,7 +207,9 @@ function Profile() {
             </AlertDialogDescription>
             <div className='flex justify-start items-center gap-x-2'>
               <Switch />
-              <div>Don't show this to me again (WIP, not finished yet)</div>
+              <div>
+                Don&apos;t show this to me again (WIP, not finished yet)
+              </div>
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter>

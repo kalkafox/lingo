@@ -1,4 +1,4 @@
-import { GuessedLingoRow, LingoRow, LingoRows } from '@/types/lingo'
+import { GuessedLingoRow, LingoRow, LingoRows, LingoState } from '@/types/lingo'
 import {
   gameAtom,
   guessedLingoAtom,
@@ -47,7 +47,7 @@ export function LingoGame() {
   }, [game.gameId])
 
   useEffect(() => {
-    setGame((prev) => ({
+    setGame((prev: LingoState) => ({
       ...prev,
       active: sessionInfo.data?.finished ? false : true,
     }))

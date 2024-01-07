@@ -36,6 +36,7 @@ export const gameSettingsAtom = atom<Settings>({
 
 export const gameAtom = atom<LingoState>({
   gameId: null,
+  active: false,
 })
 
 export const settingsOpenAtom = atom(false)
