@@ -28,7 +28,14 @@ export const Loader = () => {
     sessionInfo.isFetching
   )
     return (
-      <div className='relative flex flex-col items-center self-center justify-center select-none'>
+      <div
+        className={`fixed m-4 ${
+          !createSession.isLoading ||
+          sessionInfo.isRefetching ||
+          sessionInfo.isFetching
+            ? 'opacity-100'
+            : 'opacity-0'
+        }`}>
         <LoadingSpinner />
       </div>
     )

@@ -34,6 +34,21 @@ import {
 import greetings from '@/data/greetings'
 import { Loader } from '@/components/helpers'
 import Image from 'next/image'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { router } from '@/server/trpc'
+import { Switch } from '@/components/ui/switch'
+import { Toaster } from 'sonner'
 
 const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   const router = useRouter()
@@ -78,7 +93,7 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
 
           setPathHistory((prev) => [...prev, router.asPath])
 
-          setGame({ ...game, gameId: res })
+          setGame({ ...game, gameId: res, active: true })
 
           router.push(`/game/${res}`)
         }
@@ -114,14 +129,34 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
           <meta name='twitter:title' content={meta.title} />
           <meta name='twitter:description' content={meta.description} />
           <meta name='twitter:image' content={meta.image} />
+          <link
+            rel='apple-touch-icon'
+            sizes='180x180'
+            href='/apple-touch-icon.png'
+          />
+          <link
+            rel='icon'
+            type='image/png'
+            sizes='32x32'
+            href='/favicon-32x32.png'
+          />
+          <link
+            rel='icon'
+            type='image/png'
+            sizes='16x16'
+            href='/favicon-16x16.png'
+          />
+          <link rel='manifest' href='/manifest.webmanifest' />
+          <link rel='manifest' href='/site.webmanifest' />
         </Head>
+        <Toaster theme={'dark'} />
         <div className='fixed w-full h-full transition-colors connections' />
-        <div className='fixed bottom-0'>
-          <Profile />
-        </div>
         <animated.div style={zoomSpring}>
           <Component {...pageProps} />
         </animated.div>
+        <div className='fixed bottom-0'>
+          <Profile />
+        </div>
         <Loader />
         <Settings zoom={zoomSpring} />
       </Provider>
@@ -139,9 +174,14 @@ function processGreeting(name: string | null | undefined) {
 
 function Profile() {
   const [open, setOpen] = useAtom(settingsOpenAtom)
+  const router = useRouter()
   const session = useSession()
 
   const [greeting, setGreeting] = useState('ur gay')
+
+  const [alertActive, setAlertActive] = useState(false)
+
+  const [{ active }] = useAtom(gameAtom)
 
   const dropdownRef = useRef<HTMLButtonElement>(null)
 
@@ -152,33 +192,75 @@ function Profile() {
   }, [session.status, dropdownRef.current])
 
   return (
-    <DropdownMenu
-      onOpenChange={(open) => {
-        if (!open) return
-        setGreeting(processGreeting(session.data?.user?.name))
-      }}>
-      <DropdownMenuTrigger className='outline-none'>
-        {session.status === 'authenticated' ? (
-          <Image
-            className={'inline mx-2 rounded-lg'}
-            src={session.data?.user?.name!}
-            width={64}
-            height={64}
-            alt={'owner_avatar'}
-          />
-        ) : (
-          <Icon className='text-4xl m-2' icon='mdi:user' />
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className='bg-neutral-900/20 hexagon'>
-        <DropdownMenuLabel>{greeting}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={(e) => setOpen(true)}>
-          <Icon className='text-lg' icon='mdi:gear' />
-          <div className='mx-2'>Settings</div>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <AlertDialog open={alertActive}>
+        <AlertDialogOverlay className='backdrop-blur-sm' />
+        <AlertDialogContent className='cogs'>
+          <AlertDialogHeader>
+            <AlertDialogTitle className='flex justify-start items-center gap-x-2'>
+              <Icon className='inline' icon='icon-park-outline:word' />
+              <div>You have a current session running!</div>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be able to return back to it later. Are you sure you want
+              to start a new game?
+            </AlertDialogDescription>
+            <div className='flex justify-start items-center gap-x-2'>
+              <Switch />
+              <div>Don't show this to me again (WIP, not finished yet)</div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setAlertActive(false)
+              }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (!open) return
+          setGreeting(processGreeting(session.data?.user?.name))
+        }}>
+        <DropdownMenuTrigger className='outline-none'>
+          {session.status === 'authenticated' ? (
+            <Image
+              className={'inline mx-2 rounded-lg'}
+              src={session.data?.user?.name!}
+              width={64}
+              height={64}
+              alt={'owner_avatar'}
+            />
+          ) : (
+            <Icon className='text-4xl m-2' icon='mdi:user' />
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className='bg-neutral-900/20 hexagon'>
+          <DropdownMenuLabel>{greeting}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={(e) => {
+              if (active) {
+                setAlertActive(true)
+                return
+              }
+              router.push('/game')
+            }}>
+            <Icon className='text-lg' icon='icon-park-outline:word' />
+            <div className='mx-2'>Start new game</div>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={(e) => setOpen(true)}>
+            <Icon className='text-lg' icon='mdi:gear' />
+            <div className='mx-2'>Settings</div>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   )
 }
 

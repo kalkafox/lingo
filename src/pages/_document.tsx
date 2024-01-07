@@ -1,4 +1,5 @@
 import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/sonner'
 import { Html, Head, Main, NextScript } from 'next/document'
 
 export default function Document() {

@@ -14,6 +14,7 @@ export interface LocalSettings {
 
 export interface LingoState {
   gameId: string | undefined | null
+  active: boolean
 }
 
 export interface Char {

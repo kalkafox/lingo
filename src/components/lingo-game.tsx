@@ -1,23 +1,22 @@
-import { Char, GuessedLingoRow, LingoRow, LingoRows } from '@/types/lingo'
+import { GuessedLingoRow, LingoRow, LingoRows } from '@/types/lingo'
 import {
   gameAtom,
   guessedLingoAtom,
   lingoHistoryAtom,
   wordInputAtom,
 } from '@/util/atoms'
-import { defaultChar } from '@/util/defaults'
 import { inter } from '@/util/font'
 import { useCreateSession, useSessionInfo } from '@/util/hooks'
 import { trpc } from '@/util/trpc'
 import { Icon } from '@iconify/react'
 import { useSpring, animated, SpringValue } from '@react-spring/web'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtom } from 'jotai'
 import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 import { NewGame } from './buttons'
-import { LoadingSpinner } from './helpers'
 import Image from 'next/image'
+import { toast } from 'sonner'
 
 export function LingoGame() {
   const sessionInfo = useSessionInfo()
@@ -46,6 +45,13 @@ export function LingoGame() {
 
     sessionInfo.refetch()
   }, [game.gameId])
+
+  useEffect(() => {
+    setGame((prev) => ({
+      ...prev,
+      active: sessionInfo.data?.finished ? false : true,
+    }))
+  }, [sessionInfo.data])
 
   // useEffect(() => {
   //   if (
@@ -293,7 +299,9 @@ function Input() {
       if (!current) return
 
       let word = inputRef.current.value
-      word = word.toUpperCase()
+      word = word.replace(/[^a-zA-Z]/g, '').toUpperCase()
+
+      inputRef.current.value = word
 
       if (word === words) return
       setWords(word)
@@ -379,6 +387,14 @@ function Input() {
             (('duplicate' in res && typeof res.duplicate === 'boolean') ||
               ('invalid' in res && typeof res.invalid === 'boolean'))
           ) {
+            if ('duplicate' in res && res.duplicate) {
+              toast.error('Word already guessed. Try another!')
+            }
+
+            if ('invalid' in res && res.invalid) {
+              toast.error('Word not found in dictionary, sorry.')
+            }
+
             await shake()
             setWords('')
             inputRef.current.value = ''
