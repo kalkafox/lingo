@@ -27,7 +27,7 @@ export const appRouter = router({
         })
         .from(schema.lingoWordsV2)
         .where(
-          sql`${schema.lingoWordsV2.length} = ${input.settings.length} and ${schema.lingoWordsV2.freq} >= 10000`,
+          sql`${schema.lingoWordsV2.length} = ${input.settings.length} and ${schema.lingoWordsV2.freq} >= 10000 and ${schema.lingoWordsV2.capsPercentage} > 0 and ${schema.lingoWordsV2.capsPercentage} <= 0.95`,
         )
 
       if (!wordsCount) {
