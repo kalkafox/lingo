@@ -1,25 +1,39 @@
-import { GuessedLingoRow, LingoRow, LingoRows, LingoState } from '@/types/lingo'
 import {
+  GuessedChar,
+  GuessedLingoRow,
+  LingoRow,
+  LingoRows,
+  LingoState,
+} from '@/types/lingo'
+import {
+  fingerprintAtom,
   gameAtom,
   guessedLingoAtom,
   lingoHistoryAtom,
   wordInputAtom,
 } from '@/util/atoms'
 import { inter } from '@/util/font'
-import { useCreateSession, useSessionInfo } from '@/util/hooks'
+import useIsTouchDevice, {
+  useCreateSession,
+  useSessionInfo,
+} from '@/util/hooks'
 import { trpc } from '@/util/trpc'
 import { Icon } from '@iconify/react'
 import { useSpring, animated, SpringValue } from '@react-spring/web'
-import { useAtom } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 import { NewGame } from './buttons'
 import Image from 'next/image'
 import { toast } from 'sonner'
+import { Button } from './ui/button'
+import { ScrollArea, ScrollBar } from './ui/scroll-area'
 
 export function LingoGame() {
   const sessionInfo = useSessionInfo()
+
+  const fingerprint = useAtomValue(fingerprintAtom)
 
   const [lingoSpring, lingoSpringApi] = useSpring(() => ({
     from: {
@@ -28,11 +42,17 @@ export function LingoGame() {
     },
   }))
 
+  const sessions = trpc.getSessions.useQuery(fingerprint as string)
+
+  const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
+
   const [game, setGame] = useAtom(gameAtom)
 
   const router = useRouter()
 
   const createSession = useCreateSession()
+
+  const isMobile = useIsTouchDevice()
 
   useEffect(() => {
     if (!router.query.id) return
@@ -73,15 +93,83 @@ export function LingoGame() {
   }, [sessionInfo])
 
   return (
-    <animated.div
-      style={lingoSpring}
-      className={`${
-        Math.abs(lingoSpring.x.get()) > 0 ? 'fixed' : 'absolute'
-      } left-0 right-0 text-neutral-100 ${inter.className}`}>
-      <History />
-      <Input />
-      <Results lingoSpring={lingoSpring} />
-    </animated.div>
+    <>
+      <animated.div
+        style={lingoSpring}
+        className={`${
+          Math.abs(lingoSpring.x.get()) > 0 ? 'fixed' : 'absolute'
+        } left-0 right-0 ${inter.className}`}
+      >
+        <History />
+        <Input />
+        <Results lingoSpring={lingoSpring} />
+      </animated.div>
+      {!isMobile ? (
+        <div className="fixed top-0">
+          <ScrollArea className="h-[500px] rounded-md p-4">
+            <div className="flex flex-col">
+              {sessions.data &&
+                sessions.data.map((c, i) => {
+                  if (!c.history) return
+
+                  const words = Array.from(
+                    { length: c.history[0].length },
+                    (_, i) => {
+                      return {
+                        letter: null,
+                        correct: false,
+                      }
+                    },
+                  ) as GuessedLingoRow
+
+                  c.history.forEach((row) => {
+                    row.forEach((l, index) => {
+                      if (words[index].correct) {
+                        return
+                      }
+                      words[index] = l.correct
+                        ? ({ letter: l.letter, correct: true } as GuessedChar)
+                        : ({ letter: '.', correct: false } as GuessedChar)
+                    })
+                  })
+
+                  return (
+                    <button
+                      onClick={(e) => {
+                        setGuessedWords([])
+                        router.push(`/game/${c.uniqueId}`)
+                      }}
+                      key={i}
+                      className="my-2 rounded-lg bg-neutral-300 p-2 dark:bg-neutral-800/80"
+                    >
+                      <div
+                        className={`relative flex select-none justify-center gap-x-2 self-center py-1`}
+                      >
+                        {words.map((v, index) => {
+                          return (
+                            <div
+                              key={index}
+                              className={`inline h-10 w-10 border-2 border-neutral-800 dark:border-neutral-500 ${
+                                v.correct
+                                  ? 'bg-green-500/80'
+                                  : 'bg-neutral-300/80 dark:bg-neutral-900/20'
+                              }`}
+                            >
+                              <div className="relative top-1 flex justify-center self-center text-center">
+                                {(v && v.letter) ?? '.'}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </button>
+                  )
+                })}
+            </div>
+          </ScrollArea>
+        </div>
+      ) : null}
+    </>
   )
 }
 
@@ -176,15 +264,17 @@ function Results({
   )
     return (
       <div
-        className={`relative flex gap-x-2 my-8 self-center justify-center select-none`}>
+        className={`relative my-8 flex select-none justify-center gap-x-2 self-center`}
+      >
         {guessedWords.map((value, index, array) => {
           return (
             <div
               key={index}
-              className={`inline w-10 h-10 border-2 ${
-                !value.correct && 'bg-neutral-900'
-              } ${value.correct && 'bg-green-500/80'}`}>
-              <div className='flex text-center justify-center self-center relative top-1'>
+              className={`inline h-10 w-10 border-2 border-neutral-300 backdrop-blur-sm ${
+                !value.correct && ''
+              } ${value.correct && 'bg-green-500/80'}`}
+            >
+              <div className="relative top-1 flex justify-center self-center text-center">
                 {(value && value.letter) ?? '.'}
               </div>
             </div>
@@ -196,50 +286,54 @@ function Results({
   return (
     <>
       <div
-        className={`relative flex flex-col my-8 gap-y-2 text-center self-center justify-center items-center select-none ${inter.className}`}>
+        className={`my-8 flex select-none flex-col items-center justify-center gap-y-2 self-center text-center ${inter.className}`}
+      >
         {definition.data && definition.data[0] && (
-          <div className='bg-neutral-700/50 p-2 rounded-lg'>
-            <div className='w-80'>
+          <div className="rounded-lg bg-neutral-200/80 p-2 dark:bg-neutral-900/80">
+            <div className="w-80">
               {definition.data[0].meanings[0].definitions[0].definition}
             </div>
           </div>
         )}
-        <div className=''>
-          Finished in {sessionInfo.data.finished - sessionInfo.data.created}
-          ms by{' '}
-          {sessionInfo.data.owner ? sessionInfo.data.owner.name : 'anonymous'}
-          <animated.div
-            style={{
-              ...clipboardSpring,
-              opacity: interpolateClipboardOpacity,
-            }}
-            className='absolute inline right-0'>
-            <Icon
-              className='inline -my-[0.5pt] mx-1 text-green-500'
-              icon='mdi:check-bold'
-              inline={true}
-            />
-          </animated.div>
-          {sessionInfo.data.owner && (
-            <Image
-              className={'inline mx-2 rounded-lg'}
-              src={sessionInfo.data.owner.image!}
-              width={20}
-              height={20}
-              alt={'owner_avatar'}
-            />
-          )}
-          <button className='' onClick={animateClipboard}>
-            <Icon
-              className='inline hover:bg-neutral-100/20 transition-colors rounded-sm -my-[0.5pt] mx-1'
-              icon='ph:copy-bold'
-              inline={true}
-            />
-          </button>
-        </div>
-        <div className='gap-x-2 flex justify-center'>
-          <ClaimButton status={status} />
-          <NewGame opacity={lingoSpring.opacity} x={lingoSpring.x} />
+        <div className="rounded-lg bg-neutral-200/80 p-2 dark:bg-neutral-900/80">
+          <div className="">
+            Finished in {sessionInfo.data.finished - sessionInfo.data.created}
+            ms by{' '}
+            {sessionInfo.data.owner ? sessionInfo.data.owner.name : 'anonymous'}
+            <animated.div
+              style={{
+                ...clipboardSpring,
+                opacity: interpolateClipboardOpacity,
+              }}
+              className="absolute inline"
+            >
+              <Icon
+                className="-my-[0.5pt] mx-1 inline text-green-500"
+                icon="mdi:check-bold"
+                inline={true}
+              />
+            </animated.div>
+            {sessionInfo.data.owner && (
+              <Image
+                className={'mx-2 inline rounded-lg'}
+                src={sessionInfo.data.owner.image!}
+                width={20}
+                height={20}
+                alt={'owner_avatar'}
+              />
+            )}
+            <button className="" onClick={animateClipboard}>
+              <Icon
+                className="-my-[0.5pt] mx-1 inline rounded-sm transition-colors hover:bg-neutral-100/20"
+                icon="ph:copy-bold"
+                inline={true}
+              />
+            </button>
+          </div>
+          <div className="flex justify-center gap-x-2">
+            <ClaimButton status={status} />
+            <NewGame opacity={lingoSpring.opacity} x={lingoSpring.x} />
+          </div>
         </div>
         {/* {!sessionInfo.data.owner &&
               sessionInfo.data.fingerprint &&
@@ -271,6 +365,8 @@ function Input() {
   const [game, setGameAtom] = useAtom(gameAtom)
   const [borderColor, setBorderColor] = useState('')
 
+  const isMobile = useIsTouchDevice()
+
   const inputRef = useRef<HTMLInputElement>(null)
 
   const guessWord = trpc.guessWord.useMutation()
@@ -294,6 +390,8 @@ function Input() {
 
   // ridiculously stupid dumb hack for android
   useEffect(() => {
+    if (!isMobile) return
+
     const interval = setInterval(() => {
       const current = inputRef.current
       if (!current) return
@@ -303,6 +401,8 @@ function Input() {
 
       inputRef.current.value = word
 
+      console.log(word)
+
       if (word === words) return
       setWords(word)
     }, 80)
@@ -310,23 +410,25 @@ function Input() {
     return () => {
       clearInterval(interval)
     }
-  }, [words])
+  }, [isMobile])
 
   if (!sessionInfo.data) return
   if (sessionInfo.data.finished || !game.gameId) return
 
   return (
     <animated.div
-      style={{ x: xInterpolate, opacity, rotateZ }}
-      className='relative flex gap-x-2 top-5 self-center justify-center select-none'>
+      style={{ x: xInterpolate, rotateZ }}
+      className="relative top-5 flex select-none justify-center gap-x-2 self-center"
+    >
       {Array.from({ length: sessionInfo.data.wordLength }, (_, i) => {
         const wordsSeparated = inputRef.current?.value.split('')
 
         return (
           <div
             key={i}
-            className={`inline w-10 h-10 border-2 transition-colors bg-neutral-900/80 ${borderColor}`}>
-            <div className='flex text-center justify-center self-center relative top-1'>
+            className={`inline h-10 w-10 border-2 backdrop-blur-sm transition-colors ${borderColor}`}
+          >
+            <div className="relative top-1 flex justify-center self-center text-center">
               {(wordsSeparated &&
                 wordsSeparated[i] &&
                 wordsSeparated[i].toUpperCase()) ??
@@ -415,7 +517,8 @@ function Input() {
             console.error(res.message)
           }
         }}
-        className='absolute opacity-0'>
+        className="absolute opacity-0"
+      >
         <input
           autoFocus={true}
           onFocus={(e) => {
@@ -426,33 +529,34 @@ function Input() {
             opacity.start(0.5)
             setBorderColor('')
           }}
-          className='h-10'
+          className="h-10"
           ref={inputRef}
-          // onChange={(e) => {
-          //   console.log(e)
-          //   if (sessionInfo.data && sessionInfo.data.finished) {
-          //     return
-          //   }
-          //   const event = e.nativeEvent as InputEvent
+          onChange={(e) => {
+            console.log(e)
+            if (sessionInfo.data && sessionInfo.data.finished) {
+              return
+            }
+            const event = e.nativeEvent as InputEvent
 
-          //   if (event.inputType === 'deleteContentBackward') {
-          //     setWords(inputRef.current?.value!)
-          //   }
+            if (event.inputType === 'deleteContentBackward') {
+              setWords(inputRef.current?.value!)
+            }
 
-          //   const key = event.data
+            const key = event.data
 
-          //   if (
-          //     key &&
-          //     event.inputType === 'insertText' &&
-          //     words.length < sessionInfo.data.wordLength
-          //   ) {
-          //     const isAlphabetical = /^[a-zA-Z]$/.test(key)
-          //     if (isAlphabetical) {
-          //       setWords(inputRef.current?.value!)
-          //     }
-          //   }
-          // }}
-          type='text'></input>
+            if (
+              key &&
+              event.inputType === 'insertText' &&
+              words.length < sessionInfo.data.wordLength
+            ) {
+              const isAlphabetical = /^[a-zA-Z]$/.test(key)
+              if (isAlphabetical) {
+                setWords(inputRef.current?.value!)
+              }
+            }
+          }}
+          type="text"
+        ></input>
       </form>
     </animated.div>
   )
@@ -472,18 +576,23 @@ function History() {
   return history.map((value, index, array) => (
     <div
       key={index}
-      className={`relative flex gap-x-2 py-1 self-center justify-center select-none`}>
+      className={`relative flex select-none justify-center gap-x-2 self-center py-1`}
+    >
       {value.map((v, index) => {
         return (
           <div
             key={index}
-            className={`inline w-10 h-10 border-2 ${
+            className={`inline h-10 w-10 border-2 border-neutral-900 dark:border-neutral-800 ${
               (v.correct && 'bg-green-500/80') ||
               (v.oop && 'bg-yellow-500/80') ||
               (v.invalid && 'bg-neutral-500/80') ||
-              (!v.invalid && !v.correct && !v.oop && 'bg-neutral-900/80')
-            }`}>
-            <div className='flex text-center justify-center self-center relative top-1'>
+              (!v.invalid &&
+                !v.correct &&
+                !v.oop &&
+                'bg-neutral-300/80 dark:bg-neutral-900/20')
+            }`}
+          >
+            <div className="relative top-1 flex justify-center self-center text-center">
               {(v && v.letter) ?? '.'}
             </div>
           </div>
@@ -504,7 +613,7 @@ function ClaimButton({
   if (!gameId) return
 
   return (
-    <button
+    <Button
       onClick={async () => {
         switch (status) {
           case 'authenticated':
@@ -515,8 +624,8 @@ function ClaimButton({
             break
         }
       }}
-      className='bg-neutral-700 p-2 rounded-lg'>
+    >
       Claim it!
-    </button>
+    </Button>
   )
 }

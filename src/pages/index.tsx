@@ -21,7 +21,7 @@ export default function Home() {
   `
 
   return (
-    <div className='relative'>
+    <div className="relative">
       <Markdown>{markdown}</Markdown>
     </div>
   )

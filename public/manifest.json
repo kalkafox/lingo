@@ -1,6 +1,7 @@
 {
-  "name": "Next-13 PWA",
-  "short_name": "PWA",
+  "short_name": "Lingo",
+  "name": "Lingo (on the web)",
+  "description": "Guess words!",
   "theme_color": "#2196f3",
   "background_color": "#2196f3",
   "display": "standalone",
@@ -9,58 +10,19 @@
   "start_url": "/",
   "icons": [
     {
-      "src": "icons/icon-48x48.png",
-      "sizes": "48x48",
+      "src": "/icon-192x192.png",
       "type": "image/png",
-      "purpose": "maskable any"
+      "sizes": "192x192"
     },
     {
-      "src": "icons/icon-72x72.png",
-      "sizes": "72x72",
+      "src": "/icon-256x256.png",
       "type": "image/png",
-      "purpose": "maskable any"
+      "sizes": "256x256"
     },
     {
-      "src": "icons/icon-96x96.png",
-      "sizes": "96x96",
+      "src": "/icon-512x512.png",
       "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "sizes": "512x512"
     }
   ],
   "splash_pages": null

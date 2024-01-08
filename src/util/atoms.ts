@@ -39,6 +39,11 @@ export const gameAtom = atom<LingoState>({
   active: false,
 })
 
+export const skipNotifyCreateSessionAtom = atomWithStorage(
+  'skipNotifyCreateSession',
+  false,
+)
+
 export const settingsOpenAtom = atom(false)
 
 export const guessedLingoAtom = atom<GuessedLingoRow>([])

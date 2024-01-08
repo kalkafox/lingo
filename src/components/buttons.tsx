@@ -9,6 +9,7 @@ import { useAtom } from 'jotai'
 import { useRouter } from 'next/router'
 import { LoadingSpinner } from './helpers'
 import { SpringValue } from '@react-spring/web'
+import { Button } from './ui/button'
 
 export const NewGame = (lingoSpring: {
   x: SpringValue<number>
@@ -27,7 +28,7 @@ export const NewGame = (lingoSpring: {
   const createSession = useCreateSession()
 
   return (
-    <button
+    <Button
       onClick={async () => {
         //console.log(fingerprint)
         if (fingerprint && fingerprint !== '') {
@@ -49,8 +50,9 @@ export const NewGame = (lingoSpring: {
           router.push(`/game/${res}`)
         }
       }}
-      className={`bg-neutral-700 p-2 rounded-lg`}>
+      className={``}
+    >
       {createSession.isLoading ? <LoadingSpinner /> : 'New game'}
-    </button>
+    </Button>
   )
 }

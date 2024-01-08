@@ -21,6 +21,15 @@ export const appRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // try {
+      //   await db.execute(sql`SELECT 1`)
+      // } catch (e) {
+      //   throw new TRPCError({
+      //     code: 'INTERNAL_SERVER_ERROR',
+      //     message: "Sorry, we couldn't connect to the DB right now :(",
+      //   })
+      // }
+
       const wordsCount = await db
         .select({
           id: schema.lingoWordsV2.id,
@@ -156,6 +165,13 @@ export const appRouter = router({
         })
       }
 
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: "Can't connect to the db right now, sorry :(",
+        })
+      }
+
       const session = await db.query.lingoSessions.findFirst({
         where: eq(schema.lingoSessions.uniqueId, input.id),
         with: {
@@ -190,6 +206,11 @@ export const appRouter = router({
     const res = await fetch(api_url)
 
     return (await res.json()) as DictionaryResponse
+  }),
+  getSessions: procedure.input(z.string().max(50)).query(async ({ input }) => {
+    return await db.query.lingoSessions.findMany({
+      where: eq(schema.lingoSessions.fingerprint, input),
+    })
   }),
   guessWord: procedure
     .input(
