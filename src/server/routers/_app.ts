@@ -188,6 +188,7 @@ export const appRouter = router({
       }
 
       return {
+        id: session.uniqueId,
         finished: session.finished,
         created: session.created,
         history: session.history,

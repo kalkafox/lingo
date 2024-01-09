@@ -30,7 +30,7 @@ export const Loader = () => {
   )
     return (
       <div
-        className={`fixed m-4 ${
+        className={`fixed bottom-0 right-0 m-4 ${
           !createSession.isLoading ||
           sessionInfo.isRefetching ||
           sessionInfo.isFetching

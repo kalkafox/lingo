@@ -44,6 +44,11 @@ export const skipNotifyCreateSessionAtom = atomWithStorage(
   false,
 )
 
+export const windowSizeAtom = atom({
+  width: 0,
+  height: 0,
+})
+
 export const settingsOpenAtom = atom(false)
 
 export const guessedLingoAtom = atom<GuessedLingoRow>([])

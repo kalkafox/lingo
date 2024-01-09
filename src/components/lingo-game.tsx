@@ -10,6 +10,7 @@ import {
   gameAtom,
   guessedLingoAtom,
   lingoHistoryAtom,
+  windowSizeAtom,
   wordInputAtom,
 } from '@/util/atoms'
 import { inter } from '@/util/font'
@@ -28,12 +29,10 @@ import { NewGame } from './buttons'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
-import { ScrollArea, ScrollBar } from './ui/scroll-area'
+import { SessionList } from './session-list'
 
 export function LingoGame() {
   const sessionInfo = useSessionInfo()
-
-  const fingerprint = useAtomValue(fingerprintAtom)
 
   const [lingoSpring, lingoSpringApi] = useSpring(() => ({
     from: {
@@ -42,17 +41,9 @@ export function LingoGame() {
     },
   }))
 
-  const sessions = trpc.getSessions.useQuery(fingerprint as string)
-
-  const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
-
   const [game, setGame] = useAtom(gameAtom)
 
   const router = useRouter()
-
-  const createSession = useCreateSession()
-
-  const isMobile = useIsTouchDevice()
 
   useEffect(() => {
     if (!router.query.id) return
@@ -63,7 +54,10 @@ export function LingoGame() {
   useEffect(() => {
     if (!game.gameId) return
 
-    sessionInfo.refetch()
+    sessionInfo.refetch().then(() => {
+      lingoSpring.x.start(0)
+      lingoSpring.opacity.start(1)
+    })
   }, [game.gameId])
 
   useEffect(() => {
@@ -86,89 +80,43 @@ export function LingoGame() {
   // }, [createSession, sessionInfo])
 
   useEffect(() => {
-    if (sessionInfo.data) {
-      lingoSpring.opacity.start(1)
-      lingoSpring.x.start(0)
-    }
-  }, [sessionInfo])
+    if (
+      sessionInfo.data &&
+      router.asPath.split('/').slice(-1)[0] !== sessionInfo.data.id
+    )
+      return
+
+    if (!sessionInfo.data) return
+    console.log(router.asPath.split('/').slice(-1)[0])
+
+    if (lingoSpring.x.get() === 0 && lingoSpring.opacity.get() === 1) return
+
+    lingoSpring.opacity.set(0)
+    lingoSpring.x.set(-95)
+
+    if (sessionInfo.isRefetching || sessionInfo.isFetching) return
+
+    lingoSpring.opacity.start(1)
+    lingoSpring.x.start(0)
+  }, [sessionInfo, router.asPath])
 
   return (
     <>
       <animated.div
+        onChange={(e) => {
+          console.log('ya')
+          // todo: write a function that determines the width based on the length of the word
+        }}
         style={lingoSpring}
-        className={`${
-          Math.abs(lingoSpring.x.get()) > 0 ? 'fixed' : 'absolute'
-        } left-0 right-0 ${inter.className}`}
+        className={`absolute left-0 right-0 m-auto w-80 ${inter.className}`}
       >
         <History />
         <Input />
         <Results lingoSpring={lingoSpring} />
       </animated.div>
-      {!isMobile ? (
-        <div className="fixed top-0">
-          <ScrollArea className="h-[500px] rounded-md p-4">
-            <div className="flex flex-col">
-              {sessions.data &&
-                sessions.data.map((c, i) => {
-                  if (!c.history) return
-
-                  const words = Array.from(
-                    { length: c.history[0].length },
-                    (_, i) => {
-                      return {
-                        letter: null,
-                        correct: false,
-                      }
-                    },
-                  ) as GuessedLingoRow
-
-                  c.history.forEach((row) => {
-                    row.forEach((l, index) => {
-                      if (words[index].correct) {
-                        return
-                      }
-                      words[index] = l.correct
-                        ? ({ letter: l.letter, correct: true } as GuessedChar)
-                        : ({ letter: '.', correct: false } as GuessedChar)
-                    })
-                  })
-
-                  return (
-                    <button
-                      onClick={(e) => {
-                        setGuessedWords([])
-                        router.push(`/game/${c.uniqueId}`)
-                      }}
-                      key={i}
-                      className="my-2 rounded-lg bg-neutral-300 p-2 dark:bg-neutral-800/80"
-                    >
-                      <div
-                        className={`relative flex select-none justify-center gap-x-2 self-center py-1`}
-                      >
-                        {words.map((v, index) => {
-                          return (
-                            <div
-                              key={index}
-                              className={`inline h-10 w-10 border-2 border-neutral-800 dark:border-neutral-500 ${
-                                v.correct
-                                  ? 'bg-green-500/80'
-                                  : 'bg-neutral-300/80 dark:bg-neutral-900/20'
-                              }`}
-                            >
-                              <div className="relative top-1 flex justify-center self-center text-center">
-                                {(v && v.letter) ?? '.'}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </button>
-                  )
-                })}
-            </div>
-          </ScrollArea>
-        </div>
-      ) : null}
+      <div className="fixed top-0">
+        <SessionList lingoSpring={lingoSpring} />
+      </div>
     </>
   )
 }
@@ -244,7 +192,8 @@ function Results({
 
   useEffect(() => {
     if (
-      guessedWords.map((c) => c.correct).length >= sessionInfo.data?.wordLength!
+      guessedWords.filter((c) => c.correct).length >=
+      sessionInfo.data?.wordLength!
     ) {
       sessionInfo.refetch()
     }
@@ -382,12 +331,6 @@ function Input() {
 
   const sessionInfo = useSessionInfo()
 
-  useEffect(() => {
-    if (game.gameId) {
-      sessionInfo.refetch()
-    }
-  }, [game.gameId])
-
   // ridiculously stupid dumb hack for android
   useEffect(() => {
     if (!isMobile) return
@@ -418,7 +361,7 @@ function Input() {
   return (
     <animated.div
       style={{ x: xInterpolate, rotateZ }}
-      className="relative top-5 flex select-none justify-center gap-x-2 self-center"
+      className="relative flex select-none justify-center gap-x-2 self-center "
     >
       {Array.from({ length: sessionInfo.data.wordLength }, (_, i) => {
         const wordsSeparated = inputRef.current?.value.split('')

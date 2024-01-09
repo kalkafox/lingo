@@ -1,11 +1,9 @@
 import { SpringValue, animated, useSpring } from '@react-spring/web'
 import { Toaster } from './ui/sonner'
-import { NextComponentType, NextPageContext } from 'next'
 import { Icon } from '@iconify/react'
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -36,17 +34,28 @@ import { generatePattern } from '@/util/svg-patterns'
 import { Button } from '@/components/ui/button'
 import { MoonIcon, SunIcon } from '@radix-ui/react-icons'
 import { useTheme } from 'next-themes'
-import { Provider, useAtom, useAtomValue } from 'jotai'
-import { ReactNode, useEffect, useRef, useState } from 'react'
+import { useAtom, useAtomValue } from 'jotai'
+import {
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import {
   fingerprintAtom,
   gameAtom,
+  guessedLingoAtom,
   settingsOpenAtom,
   skipNotifyCreateSessionAtom,
+  windowSizeAtom,
 } from '@/util/atoms'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
-import { trpc } from '@/util/trpc'
+import { toast } from 'sonner'
+import { useCreateSession } from '@/util/hooks'
+import { SessionList } from './session-list'
 
 function LingoRoot({ children }: { children: ReactNode }) {
   const { theme } = useTheme()
@@ -57,6 +66,51 @@ function LingoRoot({ children }: { children: ReactNode }) {
   })
 
   // TODO: filter api return
+
+  const [sessionListOpen, setSessionListOpen] = useState(false)
+
+  const [windowSize, setWindowSize] = useAtom(windowSizeAtom)
+
+  const handleResize = (e: UIEvent) => {
+    setSessionListOpen(false)
+    setWindowSize({
+      // @ts-ignore
+      width: e.target?.innerWidth,
+      // @ts-ignore
+      height: e.target?.innerHeight,
+    })
+  }
+
+  useEffect(() => {
+    // Set initial window size
+    setWindowSize({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    })
+
+    // Add event listener for window resize
+    window.addEventListener('resize', handleResize)
+
+    // Remove event listener on component unmount
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  const fingerprint = useAtomValue(fingerprintAtom)
+
+  const sessionListSpring = useSpring({
+    opacity: 0,
+    config: {
+      tension: 500,
+    },
+  })
+
+  useEffect(() => {
+    if (sessionListOpen) {
+      sessionListSpring.opacity.start(1)
+    }
+  }, [sessionListOpen])
 
   return (
     <>
@@ -73,10 +127,23 @@ function LingoRoot({ children }: { children: ReactNode }) {
       <Toaster theme={'dark'} />
       <animated.div style={zoomSpring}>{children}</animated.div>
       <div className="fixed bottom-0">
-        <Profile />
+        <Profile setSessionListOpen={setSessionListOpen} />
       </div>
+
       <Loader />
       <Settings zoom={zoomSpring} />
+      {sessionListOpen ? (
+        <animated.div
+          style={sessionListSpring}
+          className="fixed left-0 right-0 m-auto flex h-full w-full justify-center bg-neutral-900/90 backdrop-blur-md dark:bg-neutral-900/10"
+        >
+          <SessionList
+            listSpring={sessionListSpring}
+            setSessionListOpen={setSessionListOpen}
+            forceShow={sessionListOpen}
+          />
+        </animated.div>
+      ) : null}
     </>
   )
 }
@@ -89,7 +156,11 @@ function processGreeting(name: string | null | undefined) {
   return `${greeting.replace(/[?!]$/, '')}${name ? `, ${name}` : ''}${suffix}`
 }
 
-function Profile() {
+function Profile({
+  setSessionListOpen,
+}: {
+  setSessionListOpen?: Dispatch<SetStateAction<boolean>>
+}) {
   const [open, setOpen] = useAtom(settingsOpenAtom)
   const [skipNotifyCreateSession, setSkipNotifyCreateSession] = useAtom(
     skipNotifyCreateSessionAtom,
@@ -97,6 +168,29 @@ function Profile() {
   const { setTheme, theme } = useTheme()
   const router = useRouter()
   const session = useSession()
+
+  const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
+
+  useEffect(() => {
+    if (fingerprint) return
+
+    const getFingerprint = async () => {
+      const fp = await import('@fingerprintjs/fingerprintjs')
+
+      const inst = await fp.load()
+      const result = await inst.get()
+
+      setFingerprint(result.visitorId)
+    }
+
+    getFingerprint()
+  }, [fingerprint])
+
+  const [game, setGame] = useAtom(gameAtom)
+
+  const [windowSize, setWindowSize] = useAtom(windowSizeAtom)
+
+  const createSession = useCreateSession()
 
   const [greeting, setGreeting] = useState('ur gay')
 
@@ -111,6 +205,28 @@ function Profile() {
 
     setGreeting(processGreeting(sessionName))
   }, [session.status, dropdownRef.current])
+
+  useEffect(() => {
+    if (game.active || router.asPath !== '/game') return
+    const doCreateSession = async () => {
+      try {
+        const res = await createSession.mutateAsync({
+          fingerprint: fingerprint,
+          settings: {
+            firstLetter: true,
+          },
+        })
+
+        setGame({ ...game, gameId: res, active: true })
+
+        router.push(`/game/${res}`)
+      } catch (e) {
+        toast.error('Sorry, there was en error connecting to the db :(')
+      }
+    }
+
+    doCreateSession()
+  }, [game.active, router.asPath])
 
   return (
     <>
@@ -145,6 +261,10 @@ function Profile() {
             <AlertDialogAction
               onClick={() => {
                 setAlertActive(false)
+                setGame({
+                  ...game,
+                  active: false,
+                })
                 router.push('/game')
               }}
             >
@@ -190,12 +310,28 @@ function Profile() {
                 setAlertActive(true)
                 return
               }
+              setGame({
+                ...game,
+                active: false,
+              })
               router.push('/game')
             }}
           >
             <Icon className="text-lg" icon="icon-park-outline:word" />
             <div className="mx-2">Start new game</div>
           </DropdownMenuItem>
+          {windowSize.width <= 850 ? (
+            <DropdownMenuItem
+              onSelect={(e) => {
+                if (setSessionListOpen) {
+                  setSessionListOpen(true)
+                }
+              }}
+            >
+              <Icon className="text-lg" icon="gg:list" />
+              <div className="mx-2">Sessions</div>
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onSelect={(e) => setOpen(true)}>
             <Icon className="text-lg" icon="mdi:gear" />
             <div className="mx-2">Settings</div>
