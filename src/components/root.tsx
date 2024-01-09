@@ -116,11 +116,7 @@ function LingoRoot({ children }: { children: ReactNode }) {
     <>
       <div
         style={{
-          backgroundImage: generatePattern(
-            'connections',
-            theme,
-            theme === 'light' ? 0.2 : 0.08,
-          ),
+          backgroundImage: generatePattern('connections', theme, 0.08),
         }}
         className="fixed -z-10 h-full w-full transition-colors"
       />
