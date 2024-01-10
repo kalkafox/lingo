@@ -5,8 +5,48 @@ import { trpc } from '@/util/trpc'
 import { SpringValue } from '@react-spring/web'
 import { useAtomValue, useAtom } from 'jotai'
 import { useRouter } from 'next/router'
-import { ScrollArea } from './ui/scroll-area'
+import { ScrollArea, ScrollBar } from './ui/scroll-area'
 import { Dispatch, SetStateAction } from 'react'
+import { Icon } from '@iconify/react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip'
+
+function calculateTime(num: number) {
+  const seconds = Math.floor(num / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days > 0) {
+    return `${days} day${days > 1 ? 's' : ''}`
+  } else if (hours > 0) {
+    return `${hours} hour${hours > 1 ? 's' : ''}`
+  } else if (minutes > 0) {
+    return `${minutes} minute${minutes > 1 ? 's' : ''}`
+  } else {
+    return `${seconds} second${seconds > 1 ? 's' : ''}`
+  }
+}
+
+const formatTimestamp = (timestamp: number): string => {
+  const date = new Date(timestamp)
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    timeZoneName: 'short',
+  }
+
+  const formattedDate = new Intl.DateTimeFormat('en-US', options).format(date)
+  return formattedDate
+}
 
 export function SessionList({
   lingoSpring,
@@ -76,7 +116,7 @@ export function SessionList({
                 className={`${
                   selected
                     ? 'border-neutral-900 dark:border-neutral-100'
-                    : 'opacity-80'
+                    : 'z-10 opacity-80'
                 } my-2 rounded-lg border-2 bg-neutral-300 p-2 transition-all dark:bg-neutral-800/80`}
               >
                 <div
@@ -86,19 +126,37 @@ export function SessionList({
                     return (
                       <div
                         key={index}
-                        className={`inline h-10 w-10 border-2 border-neutral-800 dark:border-neutral-500 ${
+                        className={`flex h-5 w-5 items-center justify-center border-2 border-neutral-800 dark:border-neutral-500 ${
                           v.correct
                             ? 'bg-green-500/80'
                             : 'bg-neutral-300/80 dark:bg-neutral-900/20'
                         }`}
                       >
-                        <div className="relative top-1 flex justify-center self-center text-center">
-                          {(v && v.letter) ?? '.'}
-                        </div>
+                        <div className="text-xs">{(v && v.letter) ?? '.'}</div>
                       </div>
                     )
                   })}
                 </div>
+                {c.finished ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger className="flex">
+                        <div className="flex items-center gap-x-1 text-xs">
+                          <Icon icon="mdi:clock" />
+                          {calculateTime(Date.now() - c.finished)} ago
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="">
+                        <p>
+                          Created on <b>{formatTimestamp(c.created)}</b>
+                        </p>
+                        <p>
+                          Finished on <b>{formatTimestamp(c.created)}</b>
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : null}
               </button>
             )
           })}

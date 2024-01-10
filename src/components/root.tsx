@@ -34,7 +34,7 @@ import { generatePattern } from '@/util/svg-patterns'
 import { Button } from '@/components/ui/button'
 import { MoonIcon, SunIcon } from '@radix-ui/react-icons'
 import { useTheme } from 'next-themes'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import {
   Dispatch,
   ReactNode,
@@ -122,7 +122,7 @@ function LingoRoot({ children }: { children: ReactNode }) {
       />
       <Toaster theme={'dark'} />
       <animated.div style={zoomSpring}>{children}</animated.div>
-      <div className="fixed bottom-0">
+      <div className="fixed right-0">
         <Profile setSessionListOpen={setSessionListOpen} />
       </div>
 
@@ -164,6 +164,8 @@ function Profile({
   const { setTheme, theme } = useTheme()
   const router = useRouter()
   const session = useSession()
+
+  const setGuessedWords = useSetAtom(guessedLingoAtom)
 
   const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
 
@@ -275,11 +277,12 @@ function Profile({
           setGreeting(processGreeting(session.data?.user?.name))
         }}
       >
-        <DropdownMenuTrigger className="outline-none">
-          {session.status === 'authenticated' ? (
+        <DropdownMenuTrigger className="mx-8 my-2 outline-none ">
+          {session.status !== 'authenticated' ? (
             <Image
-              className={'mx-2 inline rounded-lg'}
-              src={session.data?.user?.image!}
+              className={'inline rounded-full'}
+              //src={session.data?.user?.image!}
+              src="https://avatars.githubusercontent.com/u/9144208?v=4"
               width={64}
               height={64}
               alt={'owner_avatar'}
@@ -310,6 +313,7 @@ function Profile({
                 ...game,
                 active: false,
               })
+              setGuessedWords([])
               router.push('/game')
             }}
           >

@@ -30,6 +30,12 @@ import Image from 'next/image'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
 import { SessionList } from './session-list'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip'
 
 export function LingoGame() {
   const sessionInfo = useSessionInfo()
@@ -89,7 +95,9 @@ export function LingoGame() {
     if (!sessionInfo.data) return
     console.log(router.asPath.split('/').slice(-1)[0])
 
-    if (lingoSpring.x.get() === 0 && lingoSpring.opacity.get() === 1) return
+    // if (lingoSpring.x.get() === 0 && lingoSpring.opacity.get() === 1) return
+
+    // if (lingoSpring.x.isAnimating && Math.abs(lingoSpring.x.get()) <= 1) return
 
     lingoSpring.opacity.set(0)
     lingoSpring.x.set(-95)
@@ -98,7 +106,7 @@ export function LingoGame() {
 
     lingoSpring.opacity.start(1)
     lingoSpring.x.start(0)
-  }, [sessionInfo, router.asPath])
+  }, [sessionInfo, router.asPath, lingoSpring])
 
   return (
     <>
@@ -108,7 +116,7 @@ export function LingoGame() {
           // todo: write a function that determines the width based on the length of the word
         }}
         style={lingoSpring}
-        className={`absolute left-0 right-0 m-auto w-80 ${inter.className}`}
+        className={`absolute left-0 right-0 m-auto w-96 ${inter.className}`}
       >
         <History />
         <Input />
@@ -237,13 +245,13 @@ function Results({
       <div
         className={`my-8 flex select-none flex-col items-center justify-center gap-y-2 self-center text-center ${inter.className}`}
       >
-        {definition.data && definition.data[0] && (
+        {/* {definition.data && definition.data[0] && (
           <div className="rounded-lg bg-neutral-200/80 p-2 dark:bg-neutral-900/80">
             <div className="w-80">
               {definition.data[0].meanings[0].definitions[0].definition}
             </div>
           </div>
-        )}
+        )} */}
         <div className="rounded-lg bg-neutral-200/80 p-2 dark:bg-neutral-900/80">
           <div className="">
             Finished in {sessionInfo.data.finished - sessionInfo.data.created}
@@ -271,13 +279,22 @@ function Results({
                 alt={'owner_avatar'}
               />
             )}
-            <button className="" onClick={animateClipboard}>
-              <Icon
-                className="-my-[0.5pt] mx-1 inline rounded-sm transition-colors hover:bg-neutral-100/20"
-                icon="ph:copy-bold"
-                inline={true}
-              />
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <button className="" onClick={animateClipboard}>
+                    <Icon
+                      className="-my-[0.5pt] mx-1 inline rounded-sm transition-colors hover:bg-neutral-100/20"
+                      icon="ph:copy-bold"
+                      inline={true}
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Copy to clipboard</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <div className="flex justify-center gap-x-2">
             <ClaimButton status={status} />
