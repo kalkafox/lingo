@@ -336,6 +336,14 @@ function Profile({
             <Icon className="text-lg" icon="mdi:gear" />
             <div className="mx-2">Settings</div>
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(e) =>
+              window.open('https://github.com/kalkafox/lingo', '_blank')
+            }
+          >
+            <Icon className="text-lg" icon="mdi:github" />
+            <div className="mx-2">View project on GitHub</div>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenu>
             <div className="flex justify-center">

@@ -194,7 +194,7 @@ function Results({
 
   useEffect(() => {
     if (sessionInfo.data?.word) {
-      definition.refetch()
+      //definition.refetch()
     }
   }, [sessionInfo.data])
 
