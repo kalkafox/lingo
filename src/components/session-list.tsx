@@ -6,7 +6,7 @@ import { SpringValue } from '@react-spring/web'
 import { useAtomValue, useAtom } from 'jotai'
 import { useRouter } from 'next/router'
 import { ScrollArea, ScrollBar } from './ui/scroll-area'
-import { Dispatch, SetStateAction } from 'react'
+import { Dispatch, ReactNode, SetStateAction, useEffect } from 'react'
 import { Icon } from '@iconify/react'
 import {
   Tooltip,
@@ -14,39 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip'
-
-function calculateTime(num: number) {
-  const seconds = Math.floor(num / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (days > 0) {
-    return `${days} day${days > 1 ? 's' : ''}`
-  } else if (hours > 0) {
-    return `${hours} hour${hours > 1 ? 's' : ''}`
-  } else if (minutes > 0) {
-    return `${minutes} minute${minutes > 1 ? 's' : ''}`
-  } else {
-    return `${seconds} second${seconds > 1 ? 's' : ''}`
-  }
-}
-
-const formatTimestamp = (timestamp: number): string => {
-  const date = new Date(timestamp)
-  const options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-    timeZoneName: 'short',
-  }
-
-  const formattedDate = new Intl.DateTimeFormat('en-US', options).format(date)
-  return formattedDate
-}
+import { calculateTime, formatTimestamp } from '@/util/helpers'
 
 export function SessionList({
   lingoSpring,
@@ -67,8 +35,8 @@ export function SessionList({
   const router = useRouter()
 
   return forceShow || windowSize.width > 850 ? (
-    <ScrollArea className="h-[500px] rounded-md p-4">
-      <div className="flex flex-col">
+    <ScrollArea className="h-[500px] rounded-md">
+      <div className="m-4 flex flex-col">
         {sessions.data &&
           sessions.data.map((c, i) => {
             if (!c.history) return
@@ -126,7 +94,9 @@ export function SessionList({
                     return (
                       <div
                         key={index}
-                        className={`flex h-5 w-5 items-center justify-center border-2 border-neutral-800 dark:border-neutral-500 ${
+                        className={`flex transition-all ${
+                          selected ? 'h-6 w-6' : 'h-5 w-5'
+                        } items-center justify-center border-2 border-neutral-800 dark:border-neutral-500 ${
                           v.correct
                             ? 'bg-green-500/80'
                             : 'bg-neutral-300/80 dark:bg-neutral-900/20'
@@ -146,7 +116,7 @@ export function SessionList({
                           {calculateTime(Date.now() - c.finished)} ago
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent className="">
+                      <TooltipContent>
                         <p>
                           Created on <b>{formatTimestamp(c.created)}</b>
                         </p>
@@ -163,4 +133,32 @@ export function SessionList({
       </div>
     </ScrollArea>
   ) : null
+}
+
+function TimestampTooltip({
+  children,
+  created,
+  finished,
+}: {
+  children: ReactNode
+  created: number
+  finished: number | null
+}) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger className="flex">
+          <div className="flex items-center gap-x-1 text-xs">{children}</div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>
+            Created on <b>{formatTimestamp(created)}</b>
+          </p>
+          <p>
+            Finished on <b>{formatTimestamp(finished!)}</b>
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
 }

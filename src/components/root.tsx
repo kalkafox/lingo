@@ -116,15 +116,15 @@ function LingoRoot({ children }: { children: ReactNode }) {
     <>
       <div
         style={{
-          backgroundImage: generatePattern('connections', theme, 0.08),
+          backgroundImage: generatePattern('connections', theme, 0.2),
         }}
         className="fixed -z-10 h-full w-full transition-colors"
       />
-      <Toaster theme={'dark'} />
-      <animated.div style={zoomSpring}>{children}</animated.div>
-      <div className="fixed right-0">
+      <div className="fixed right-0 z-10">
         <Profile setSessionListOpen={setSessionListOpen} />
       </div>
+      <Toaster theme={'dark'} />
+      <animated.div style={zoomSpring}>{children}</animated.div>
 
       <Loader />
       <Settings zoom={zoomSpring} />
@@ -353,7 +353,10 @@ function Profile({
                   <span className="sr-only">Toggle theme</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent
+                className="bg-neutral-100/20 backdrop-blur-sm dark:bg-neutral-900/20"
+                align="end"
+              >
                 <DropdownMenuItem onClick={() => setTheme('light')}>
                   Light
                 </DropdownMenuItem>
@@ -440,11 +443,11 @@ function Settings({ zoom }: { zoom: { scale: SpringValue<number> } }) {
             theme === 'light' ? 0.02 : 0.08,
           ),
         }}
-        className="border-1 hexagon rounded-lg bg-neutral-100 p-6 dark:border-neutral-300 dark:bg-neutral-900"
+        className="border-1 hexagon w-96 rounded-lg bg-neutral-100 p-6 dark:border-neutral-300 dark:bg-neutral-900"
       >
         <div className="relative bottom-5 left-5 flex items-end justify-end">
           <button onClick={() => setOpen(false)}>
-            <Icon icon="carbon:close-outline" />
+            <Icon className="h-5 w-5" icon="carbon:close-outline" />
           </button>
         </div>
         {/* <div className='flex justify-center items-center gap-x-1'>
@@ -459,7 +462,7 @@ function Settings({ zoom }: { zoom: { scale: SpringValue<number> } }) {
             </SelectTrigger>
             <SelectContent></SelectContent>
           </Select>
-          <div className="flex items-center gap-x-1">
+          <div className="flex items-center gap-x-2 text-xs">
             <Switch
               checked={skipNotifyCreateSession}
               onCheckedChange={(e) => setSkipNotifyCreateSession(e)}

@@ -2,6 +2,7 @@ import { trpc } from './trpc'
 import { useAtomValue } from 'jotai'
 import { gameAtom } from './atoms'
 import { useEffect, useState } from 'react'
+import { useSpring } from '@react-spring/web'
 
 export function useCreateSession() {
   return trpc.createSession.useMutation()
@@ -78,4 +79,29 @@ export default function useIsTouchDevice() {
   }, [])
 
   return isTouch
+}
+
+export function useClipboardSpring() {
+  const clipboardSpring = useSpring({ y: 0, opacity: 0, display: 'none' })
+  const interpolateClipboardOpacity = clipboardSpring.opacity.to(
+    [0, 0.25, 0.5, 0.75, 1],
+    [0, 0.5, 1, 0.5, 0],
+  )
+
+  const animateClipboard = async () => {
+    navigator.clipboard.writeText(window.location.href)
+    if (clipboardSpring.y.isAnimating) {
+      clipboardSpring.opacity.set(0)
+      clipboardSpring.y.set(0)
+    }
+    clipboardSpring.display.set('inline')
+    clipboardSpring.opacity.start(1)
+    await clipboardSpring.y.start(-20)
+    if (clipboardSpring.y.isAnimating) return
+    clipboardSpring.y.set(0)
+    clipboardSpring.opacity.set(0)
+    clipboardSpring.display.set('none')
+  }
+
+  return { clipboardSpring, interpolateClipboardOpacity, animateClipboard }
 }

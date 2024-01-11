@@ -25,7 +25,7 @@ import { useAtom, useAtomValue } from 'jotai'
 import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
-import { NewGame } from './buttons'
+import { CopyButton, NewGame } from './buttons'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
@@ -36,6 +36,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip'
+import { calculateTime } from '@/util/helpers'
 
 export function LingoGame() {
   const sessionInfo = useSessionInfo()
@@ -48,6 +49,8 @@ export function LingoGame() {
   }))
 
   const [game, setGame] = useAtom(gameAtom)
+
+  const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
 
   const router = useRouter()
 
@@ -95,9 +98,9 @@ export function LingoGame() {
     if (!sessionInfo.data) return
     console.log(router.asPath.split('/').slice(-1)[0])
 
-    // if (lingoSpring.x.get() === 0 && lingoSpring.opacity.get() === 1) return
+    if (lingoSpring.x.get() === 0 && lingoSpring.opacity.get() === 1) return
 
-    // if (lingoSpring.x.isAnimating && Math.abs(lingoSpring.x.get()) <= 1) return
+    if (lingoSpring.x.isAnimating && Math.abs(lingoSpring.x.get()) <= 1) return
 
     lingoSpring.opacity.set(0)
     lingoSpring.x.set(-95)
@@ -129,31 +132,6 @@ export function LingoGame() {
   )
 }
 
-function useClipboardSpring() {
-  const clipboardSpring = useSpring({ y: 0, opacity: 0, display: 'none' })
-  const interpolateClipboardOpacity = clipboardSpring.opacity.to(
-    [0, 0.25, 0.5, 0.75, 1],
-    [0, 0.5, 1, 0.5, 0],
-  )
-
-  const animateClipboard = async () => {
-    navigator.clipboard.writeText(window.location.href)
-    if (clipboardSpring.y.isAnimating) {
-      clipboardSpring.opacity.set(0)
-      clipboardSpring.y.set(0)
-    }
-    clipboardSpring.display.set('inline')
-    clipboardSpring.opacity.start(1)
-    await clipboardSpring.y.start(-20)
-    if (clipboardSpring.y.isAnimating) return
-    clipboardSpring.y.set(0)
-    clipboardSpring.opacity.set(0)
-    clipboardSpring.display.set('none')
-  }
-
-  return { clipboardSpring, interpolateClipboardOpacity, animateClipboard }
-}
-
 function Results({
   lingoSpring,
 }: {
@@ -162,8 +140,8 @@ function Results({
   const { status } = useSession()
   const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
   const [history, setHistory] = useAtom(lingoHistoryAtom)
-  const { clipboardSpring, interpolateClipboardOpacity, animateClipboard } =
-    useClipboardSpring()
+
+  const router = useRouter()
 
   const sessionInfo = useSessionInfo()
 
@@ -175,7 +153,7 @@ function Results({
   )
 
   useEffect(() => {
-    console.log(guessedWords)
+    setGuessedWords([])
     history.forEach((row) => {
       setGuessedWords(
         (prev) =>
@@ -190,7 +168,7 @@ function Results({
           }) as GuessedLingoRow,
       )
     })
-  }, [history])
+  }, [history, router.asPath])
 
   useEffect(() => {
     if (sessionInfo.data?.word) {
@@ -206,8 +184,6 @@ function Results({
       sessionInfo.refetch()
     }
   }, [guessedWords])
-
-  const router = useRouter()
 
   console.log(guessedWords.filter((c) => c.correct).length)
 
@@ -253,48 +229,35 @@ function Results({
           </div>
         )} */}
         <div className="rounded-lg bg-neutral-200/80 p-2 dark:bg-neutral-900/80">
-          <div className="">
-            Finished in {sessionInfo.data.finished - sessionInfo.data.created}
-            ms by{' '}
-            {sessionInfo.data.owner ? sessionInfo.data.owner.name : 'anonymous'}
-            <animated.div
-              style={{
-                ...clipboardSpring,
-                opacity: interpolateClipboardOpacity,
-              }}
-              className="absolute inline"
-            >
-              <Icon
-                className="-my-[0.5pt] mx-1 inline text-green-500"
-                icon="mdi:check-bold"
-                inline={true}
-              />
-            </animated.div>
-            {sessionInfo.data.owner && (
-              <Image
-                className={'mx-2 inline rounded-lg'}
-                src={sessionInfo.data.owner.image!}
-                width={20}
-                height={20}
-                alt={'owner_avatar'}
-              />
-            )}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <button className="" onClick={animateClipboard}>
-                    <Icon
-                      className="-my-[0.5pt] mx-1 inline rounded-sm transition-colors hover:bg-neutral-100/20"
-                      icon="ph:copy-bold"
-                      inline={true}
-                    />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Copy to clipboard</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex-col items-center p-2">
+            <div className="flex items-center gap-x-1">
+              <Icon icon="mdi:clock" />
+              <div>
+                Took{' '}
+                {calculateTime(
+                  sessionInfo.data.finished - sessionInfo.data.created,
+                )}{' '}
+                ({calculateTime(Date.now() - sessionInfo.data.created)} ago)
+              </div>
+              <CopyButton />
+            </div>
+            <div className="flex items-center gap-x-1">
+              <Icon icon="mdi:user-outline" />
+              <div>
+                {sessionInfo.data.owner
+                  ? sessionInfo.data.owner.name
+                  : 'anonymous'}
+              </div>
+              {sessionInfo.data.owner && (
+                <Image
+                  className={'mx-1 inline rounded-lg'}
+                  src={sessionInfo.data.owner.image!}
+                  width={20}
+                  height={20}
+                  alt={'owner_avatar'}
+                />
+              )}
+            </div>
           </div>
           <div className="flex justify-center gap-x-2">
             <ClaimButton status={status} />
@@ -386,9 +349,9 @@ function Input() {
         return (
           <div
             key={i}
-            className={`inline h-10 w-10 border-2 backdrop-blur-sm transition-colors ${borderColor}`}
+            className={`flex h-10 w-10 items-center justify-center self-center border-2 backdrop-blur-sm transition-colors ${borderColor}`}
           >
-            <div className="relative top-1 flex justify-center self-center text-center">
+            <div className="">
               {(wordsSeparated &&
                 wordsSeparated[i] &&
                 wordsSeparated[i].toUpperCase()) ??
@@ -542,7 +505,7 @@ function History() {
         return (
           <div
             key={index}
-            className={`inline h-10 w-10 border-2 border-neutral-900 dark:border-neutral-800 ${
+            className={`flex h-10 w-10 items-center justify-center  border-2 border-neutral-900 dark:border-neutral-800 ${
               (v.correct && 'bg-green-500/80') ||
               (v.oop && 'bg-yellow-500/80') ||
               (v.invalid && 'bg-neutral-500/80') ||
@@ -552,9 +515,7 @@ function History() {
                 'bg-neutral-300/80 dark:bg-neutral-900/20')
             }`}
           >
-            <div className="relative top-1 flex justify-center self-center text-center">
-              {(v && v.letter) ?? '.'}
-            </div>
+            <div className="">{(v && v.letter) ?? '.'}</div>
           </div>
         )
       })}
@@ -569,8 +530,11 @@ function ClaimButton({
 }) {
   const [{ gameId }] = useAtom(gameAtom)
   const claimSessionMutation = trpc.claimSession.useMutation()
+  const sessionInfo = useSessionInfo()
 
   if (!gameId) return
+
+  if (sessionInfo.data?.owner) return
 
   return (
     <Button
@@ -578,6 +542,7 @@ function ClaimButton({
         switch (status) {
           case 'authenticated':
             await claimSessionMutation.mutateAsync(gameId)
+            sessionInfo.refetch()
             break
           case 'unauthenticated':
             signIn()

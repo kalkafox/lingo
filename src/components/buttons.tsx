@@ -4,12 +4,19 @@ import {
   guessedLingoAtom,
   lingoHistoryAtom,
 } from '@/util/atoms'
-import { useCreateSession } from '@/util/hooks'
+import { useClipboardSpring, useCreateSession } from '@/util/hooks'
 import { useAtom } from 'jotai'
 import { useRouter } from 'next/router'
 import { LoadingSpinner } from './helpers'
-import { SpringValue } from '@react-spring/web'
+import { SpringValue, animated } from '@react-spring/web'
 import { Button } from './ui/button'
+import { Icon } from '@iconify/react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip'
 
 export const NewGame = (lingoSpring: {
   x: SpringValue<number>
@@ -18,10 +25,6 @@ export const NewGame = (lingoSpring: {
   const router = useRouter()
 
   const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
-
-  const [gameSettings, setGameSettings] = useAtom(gameSettingsAtom)
-
-  const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
 
   const [history, setHistory] = useAtom(lingoHistoryAtom)
 
@@ -43,7 +46,6 @@ export const NewGame = (lingoSpring: {
           })
           lingoSpring.opacity.set(0)
           lingoSpring.x.set(95)
-          setGuessedWords([])
           setHistory([])
           //setConfettiVisible(false)
 
@@ -54,5 +56,44 @@ export const NewGame = (lingoSpring: {
     >
       {createSession.isLoading ? <LoadingSpinner /> : 'New game'}
     </Button>
+  )
+}
+
+export const CopyButton = ({ className }: { className?: string }) => {
+  const { clipboardSpring, interpolateClipboardOpacity, animateClipboard } =
+    useClipboardSpring()
+
+  return (
+    <div className={className}>
+      <animated.div
+        style={{
+          ...clipboardSpring,
+          opacity: interpolateClipboardOpacity,
+        }}
+        className="absolute inline"
+      >
+        <Icon
+          className="-my-[0.5pt] mx-1 inline text-green-500"
+          icon="mdi:check-bold"
+          inline={true}
+        />
+      </animated.div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>
+            <button onClick={animateClipboard}>
+              <Icon
+                className="-my-[0.5pt] mx-1 inline rounded-sm transition-colors hover:bg-neutral-100/20"
+                icon="ion:share-outline"
+                inline={true}
+              />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Share link (copies to clipboard)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   )
 }
