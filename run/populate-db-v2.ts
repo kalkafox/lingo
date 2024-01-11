@@ -1,7 +1,7 @@
-import Papa from 'papaparse'
-import * as schema from '../src/db/schema'
 import { drizzle } from 'drizzle-orm/mysql2'
 import mysql from 'mysql2/promise'
+import Papa from 'papaparse'
+import * as schema from '../src/db/schema'
 
 const DATASET_URL = new URL(
   'https://www.wordfrequency.info/samples/words_219k.txt',

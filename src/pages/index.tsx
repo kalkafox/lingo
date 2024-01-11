@@ -1,7 +1,7 @@
-import { Inter } from 'next/font/google'
-import { useAtom } from 'jotai'
 import { fingerprintAtom, gameSettingsAtom } from '@/util/atoms'
 import { trpc } from '@/util/trpc'
+import { useAtom } from 'jotai'
+import { Inter } from 'next/font/google'
 import { useRouter } from 'next/router'
 import Markdown from 'react-markdown'
 

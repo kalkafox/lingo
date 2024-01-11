@@ -1,20 +1,20 @@
-import { GuessedLingoRow, GuessedChar } from '@/types/lingo'
-import { fingerprintAtom, windowSizeAtom, guessedLingoAtom } from '@/util/atoms'
+import { GuessedChar, GuessedLingoRow } from '@/types/lingo'
+import { fingerprintAtom, guessedLingoAtom, windowSizeAtom } from '@/util/atoms'
+import { calculateTime, formatTimestamp } from '@/util/helpers'
 import useIsTouchDevice from '@/util/hooks'
 import { trpc } from '@/util/trpc'
-import { SpringValue } from '@react-spring/web'
-import { useAtomValue, useAtom } from 'jotai'
-import { useRouter } from 'next/router'
-import { ScrollArea, ScrollBar } from './ui/scroll-area'
-import { Dispatch, ReactNode, SetStateAction, useEffect } from 'react'
 import { Icon } from '@iconify/react'
+import { SpringValue } from '@react-spring/web'
+import { useAtom, useAtomValue } from 'jotai'
+import { useRouter } from 'next/router'
+import { Dispatch, ReactNode, SetStateAction } from 'react'
+import { ScrollArea } from './ui/scroll-area'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip'
-import { calculateTime, formatTimestamp } from '@/util/helpers'
 
 export function SessionList({
   lingoSpring,

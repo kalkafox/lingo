@@ -1,6 +1,6 @@
-import Papa from 'papaparse'
 import { drizzle } from 'drizzle-orm/mysql2'
 import mysql from 'mysql2/promise'
+import Papa from 'papaparse'
 import { config } from '../src/db/config'
 import * as schema from '../src/db/schema'
 

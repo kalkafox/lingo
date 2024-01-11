@@ -1,16 +1,17 @@
+import { fingerprintAtom, gameAtom, lingoHistoryAtom } from '@/util/atoms'
 import {
-  fingerprintAtom,
-  gameSettingsAtom,
-  guessedLingoAtom,
-  lingoHistoryAtom,
-} from '@/util/atoms'
-import { useClipboardSpring, useCreateSession } from '@/util/hooks'
+  useClipboardSpring,
+  useCreateSession,
+  useSessionInfo,
+} from '@/util/hooks'
+import { trpc } from '@/util/trpc'
+import { Icon } from '@iconify/react'
+import { SpringValue, animated } from '@react-spring/web'
 import { useAtom } from 'jotai'
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { LoadingSpinner } from './helpers'
-import { SpringValue, animated } from '@react-spring/web'
 import { Button } from './ui/button'
-import { Icon } from '@iconify/react'
 import {
   Tooltip,
   TooltipContent,
@@ -95,5 +96,37 @@ export const CopyButton = ({ className }: { className?: string }) => {
         </Tooltip>
       </TooltipProvider>
     </div>
+  )
+}
+
+export function ClaimButton({
+  status,
+}: {
+  status: 'authenticated' | 'unauthenticated' | 'loading'
+}) {
+  const [{ gameId }] = useAtom(gameAtom)
+  const claimSessionMutation = trpc.claimSession.useMutation()
+  const sessionInfo = useSessionInfo()
+
+  if (!gameId) return
+
+  if (sessionInfo.data?.owner) return
+
+  return (
+    <Button
+      onClick={async () => {
+        switch (status) {
+          case 'authenticated':
+            await claimSessionMutation.mutateAsync(gameId)
+            sessionInfo.refetch()
+            break
+          case 'unauthenticated':
+            signIn()
+            break
+        }
+      }}
+    >
+      Claim it!
+    </Button>
   )
 }

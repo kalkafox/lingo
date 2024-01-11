@@ -9,6 +9,7 @@
   "endOfLine": "auto",
   "plugins": [
     "prettier-plugin-organize-attributes",
-    "prettier-plugin-tailwindcss"
+    "prettier-plugin-tailwindcss",
+    "prettier-plugin-organize-imports"
   ]
 }

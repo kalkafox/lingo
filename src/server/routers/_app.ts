@@ -1,13 +1,13 @@
-import { z } from 'zod'
-import { procedure, protectedProcedure, router } from '../trpc'
+import * as schema from '@/db/schema'
+import { DictionaryResponse } from '@/types/dictionary'
 import type { Char, Letter, LingoRow, LingoRows } from '@/types/lingo'
 import { defaultChar } from '@/util/defaults'
-import { eq, gte, max, sql } from 'drizzle-orm'
 import { TRPCError } from '@trpc/server'
-import * as schema from '@/db/schema'
-import { db } from '../db'
 import cryptoRandomString from 'crypto-random-string'
-import { DictionaryResponse } from '@/types/dictionary'
+import { eq, sql } from 'drizzle-orm'
+import { z } from 'zod'
+import { db } from '../db'
+import { procedure, protectedProcedure, router } from '../trpc'
 
 export const appRouter = router({
   createSession: procedure

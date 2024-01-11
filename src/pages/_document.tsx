@@ -1,6 +1,5 @@
-import { ThemeProvider } from '@/components/theme-provider'
-import { Html, Head, Main, NextScript } from 'next/document'
 import meta from '@/data/meta.json'
+import { Head, Html, Main, NextScript } from 'next/document'
 
 export default function Document() {
   return (

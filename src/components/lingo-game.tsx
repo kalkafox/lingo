@@ -1,42 +1,24 @@
+import { GuessedLingoRow, LingoRow, LingoRows, LingoState } from '@/types/lingo'
 import {
-  GuessedChar,
-  GuessedLingoRow,
-  LingoRow,
-  LingoRows,
-  LingoState,
-} from '@/types/lingo'
-import {
-  fingerprintAtom,
   gameAtom,
   guessedLingoAtom,
   lingoHistoryAtom,
-  windowSizeAtom,
   wordInputAtom,
 } from '@/util/atoms'
 import { inter } from '@/util/font'
-import useIsTouchDevice, {
-  useCreateSession,
-  useSessionInfo,
-} from '@/util/hooks'
+import { calculateTime } from '@/util/helpers'
+import useIsTouchDevice, { useSessionInfo } from '@/util/hooks'
 import { trpc } from '@/util/trpc'
 import { Icon } from '@iconify/react'
-import { useSpring, animated, SpringValue } from '@react-spring/web'
-import { useAtom, useAtomValue } from 'jotai'
-import { useSession, signIn } from 'next-auth/react'
+import { SpringValue, animated, useSpring } from '@react-spring/web'
+import { useAtom } from 'jotai'
+import { useSession } from 'next-auth/react'
+import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
-import { CopyButton, NewGame } from './buttons'
-import Image from 'next/image'
 import { toast } from 'sonner'
-import { Button } from './ui/button'
+import { ClaimButton, CopyButton, NewGame } from './buttons'
 import { SessionList } from './session-list'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './ui/tooltip'
-import { calculateTime } from '@/util/helpers'
 
 export function LingoGame() {
   const sessionInfo = useSessionInfo()
@@ -521,36 +503,4 @@ function History() {
       })}
     </div>
   ))
-}
-
-function ClaimButton({
-  status,
-}: {
-  status: 'authenticated' | 'unauthenticated' | 'loading'
-}) {
-  const [{ gameId }] = useAtom(gameAtom)
-  const claimSessionMutation = trpc.claimSession.useMutation()
-  const sessionInfo = useSessionInfo()
-
-  if (!gameId) return
-
-  if (sessionInfo.data?.owner) return
-
-  return (
-    <Button
-      onClick={async () => {
-        switch (status) {
-          case 'authenticated':
-            await claimSessionMutation.mutateAsync(gameId)
-            sessionInfo.refetch()
-            break
-          case 'unauthenticated':
-            signIn()
-            break
-        }
-      }}
-    >
-      Claim it!
-    </Button>
-  )
 }

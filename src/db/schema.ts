@@ -1,18 +1,16 @@
+import { LingoRows } from '@/types/lingo'
+import { AdapterAccount } from '@auth/core/adapters'
 import { relations } from 'drizzle-orm'
 import {
   bigint,
-  datetime,
   float,
   int,
   json,
   mysqlSchema,
   primaryKey,
-  text,
   timestamp,
   varchar,
 } from 'drizzle-orm/mysql-core'
-import { AdapterAccount } from '@auth/core/adapters'
-import { LingoRows } from '@/types/lingo'
 
 export const lingoSchema = mysqlSchema('lingo')
 

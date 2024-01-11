@@ -1,6 +1,6 @@
 import Confetti from '@/components/confetti'
-import { useSessionInfo } from '@/util/hooks'
 import { LingoGame } from '@/components/lingo-game'
+import { useSessionInfo } from '@/util/hooks'
 
 function Game() {
   const sessionInfo = useSessionInfo()

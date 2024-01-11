@@ -1,5 +1,4 @@
 import chroma from 'chroma-js'
-import { useTheme } from 'next-themes'
 
 const patterns: Record<string, string> = {
   hexagon:

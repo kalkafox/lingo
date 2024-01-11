@@ -1,5 +1,3 @@
-import { confettiVisibleAtom } from '@/util/atoms'
-import { useAtom } from 'jotai'
 import { useCallback, useEffect, useRef } from 'react'
 
 import ReactCanvasConfetti from 'react-canvas-confetti'

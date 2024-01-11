@@ -1,8 +1,8 @@
 import { drizzle } from 'drizzle-orm/mysql2'
+import { eq } from 'drizzle-orm/sql'
 import mysql from 'mysql2/promise'
 import { config } from '../src/db/config'
 import * as schema from '../src/db/schema'
-import { eq } from 'drizzle-orm/sql'
 const poolConnection = mysql.createPool(config)
 
 export const db = drizzle(poolConnection, { mode: 'default', schema })

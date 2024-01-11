@@ -1,23 +1,4 @@
-import { SpringValue, animated, useSpring } from '@react-spring/web'
-import { Toaster } from './ui/sonner'
-import { Icon } from '@iconify/react'
-import {
-  Select,
-  SelectContent,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import greetings from '@/data/greetings'
 import { Loader } from '@/components/helpers'
-import Image from 'next/image'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,20 +10,23 @@ import {
   AlertDialogOverlay,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Switch } from '@/components/ui/switch'
-import { generatePattern } from '@/util/svg-patterns'
 import { Button } from '@/components/ui/button'
-import { MoonIcon, SunIcon } from '@radix-ui/react-icons'
-import { useTheme } from 'next-themes'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import {
-  Dispatch,
-  ReactNode,
-  SetStateAction,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import greetings from '@/data/greetings'
 import {
   fingerprintAtom,
   gameAtom,
@@ -51,11 +35,27 @@ import {
   skipNotifyCreateSessionAtom,
   windowSizeAtom,
 } from '@/util/atoms'
-import { useRouter } from 'next/router'
-import { useSession } from 'next-auth/react'
-import { toast } from 'sonner'
 import { useCreateSession } from '@/util/hooks'
+import { generatePattern } from '@/util/svg-patterns'
+import { Icon } from '@iconify/react'
+import { MoonIcon, SunIcon } from '@radix-ui/react-icons'
+import { SpringValue, animated, useSpring } from '@react-spring/web'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { useSession } from 'next-auth/react'
+import { useTheme } from 'next-themes'
+import Image from 'next/image'
+import { useRouter } from 'next/router'
+import {
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+import { toast } from 'sonner'
 import { SessionList } from './session-list'
+import { Toaster } from './ui/sonner'
 
 function LingoRoot({ children }: { children: ReactNode }) {
   const { theme } = useTheme()

@@ -1,15 +1,10 @@
-import '@/styles/globals.css'
-import type { AppProps } from 'next/app'
-import { Provider, useAtom } from 'jotai'
-import { trpc } from '@/util/trpc'
-import { useEffect } from 'react'
-import { SessionProvider } from 'next-auth/react'
-import { useRouter } from 'next/router'
-import { fingerprintAtom, gameAtom, pathHistoryAtom } from '@/util/atoms'
-import { useCreateSession } from '@/util/hooks'
-import { ThemeProvider } from '@/components/theme-provider'
 import LingoRoot from '@/components/root'
-import { toast } from 'sonner'
+import { ThemeProvider } from '@/components/theme-provider'
+import '@/styles/globals.css'
+import { trpc } from '@/util/trpc'
+import { Provider } from 'jotai'
+import { SessionProvider } from 'next-auth/react'
+import type { AppProps } from 'next/app'
 
 const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   return (
