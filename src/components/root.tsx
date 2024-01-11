@@ -282,7 +282,6 @@ function Profile({
             <Image
               className={'inline rounded-full'}
               src={session.data?.user?.image!}
-              //src="https://avatars.githubusercontent.com/u/9144208?v=4"
               width={64}
               height={64}
               alt={'owner_avatar'}
