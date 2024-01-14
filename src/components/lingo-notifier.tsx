@@ -1,6 +1,7 @@
 // Highly experimental, notifies clients of game activity using Convex
 
 import { useQuery } from 'convex/react'
+import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -8,6 +9,8 @@ import { api } from '../../convex/_generated/api'
 
 function LingoNotifier() {
   const lastLingoSession = useQuery(api.functions.getLatestSession)
+
+  const session = useSession()
 
   const [count, setCount] = useState(0)
 
@@ -18,7 +21,7 @@ function LingoNotifier() {
 
     if (count < 1) return
 
-    console.log(lastLingoSession)
+    const ownsSession = lastLingoSession.name === session.data?.user.name
 
     if (!lastLingoSession.complete) {
       toast.info(
@@ -33,8 +36,12 @@ function LingoNotifier() {
             />
           ) : null}
           <div>{`${
-            lastLingoSession.name ? lastLingoSession.name : 'An anonymous user'
-          } just started a new game!`}</div>
+            lastLingoSession.name
+              ? ownsSession
+                ? 'You'
+                : lastLingoSession.name
+              : 'An anonymous user'
+          } just started a new game! ${ownsSession ? 'Good luck!' : ''}`}</div>
         </>,
       )
     }
@@ -52,8 +59,12 @@ function LingoNotifier() {
             />
           ) : null}
           <div>{`${
-            lastLingoSession.name ? lastLingoSession.name : 'An anonymous user'
-          } just finished a game!`}</div>
+            lastLingoSession.name
+              ? ownsSession
+                ? 'You'
+                : lastLingoSession.name
+              : 'An anonymous user'
+          } finished a game! ${ownsSession ? 'Congrats!' : ''}`}</div>
         </>,
       )
     }
