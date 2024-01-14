@@ -1,23 +1,11 @@
-import { AppRouter } from '@/server/routers/_app'
 import type {
   GuessedLingoRow,
   LingoRows,
   LingoState,
   Settings,
 } from '@/types/lingo'
-import { httpLink } from '@trpc/client'
 import { atom } from 'jotai'
-import { createTRPCJotai } from 'jotai-trpc'
 import { atomWithStorage } from 'jotai/utils'
-import { getBaseUrl } from './trpc'
-
-const trpcJotai = createTRPCJotai<AppRouter>({
-  links: [
-    httpLink({
-      url: getBaseUrl(),
-    }),
-  ],
-})
 
 // LingoRows instance
 export const lingoHistoryAtom = atom<LingoRows>([])

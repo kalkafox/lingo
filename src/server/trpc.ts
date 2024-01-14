@@ -1,4 +1,4 @@
-import { TRPCError, initTRPC } from '@trpc/server'
+import { TRPCError, initTRPC } from '@trpc/core'
 import { CreateNextContextOptions } from '@trpc/server/adapters/next'
 import { getServerAuthSession } from './auth'
 
@@ -6,6 +6,8 @@ import { getServerAuthSession } from './auth'
 // since it's not very descriptive.
 // For instance, the use of a t variable
 // is common in i18n libraries.
+
+const secret = process.env.NEXTAUTH_SECRET
 
 export const createContext = async (opts: CreateNextContextOptions) => {
   const { req, res } = opts

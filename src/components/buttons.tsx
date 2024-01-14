@@ -6,10 +6,12 @@ import {
 } from '@/util/hooks'
 import { trpc } from '@/util/trpc'
 import { Icon } from '@iconify/react'
-import { SpringValue, animated } from '@react-spring/web'
+import { animated } from '@react-spring/web'
+import { useAction } from 'convex/react'
 import { useAtom } from 'jotai'
-import { signIn } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
+import { api } from '../../convex/_generated/api'
 import { LoadingSpinner } from './helpers'
 import { Button } from './ui/button'
 import {
@@ -19,10 +21,7 @@ import {
   TooltipTrigger,
 } from './ui/tooltip'
 
-export const NewGame = (lingoSpring: {
-  x: SpringValue<number>
-  opacity: SpringValue<number>
-}) => {
+export const NewGame = () => {
   const router = useRouter()
 
   const [fingerprint, setFingerprint] = useAtom(fingerprintAtom)
@@ -31,31 +30,45 @@ export const NewGame = (lingoSpring: {
 
   const createSession = useCreateSession()
 
+  const session = useSession()
+
+  const notifySession = useAction(api.functions.verifyAndMutateSession)
+
   return (
     <Button
       onClick={async () => {
         //console.log(fingerprint)
         if (fingerprint && fingerprint !== '') {
-          console.log('lol')
-          lingoSpring.x.start(-90)
-          lingoSpring.opacity.start(0)
+          // lingoSpring.x.start(RIGHT_X)
+          // lingoSpring.opacity.start(0)
+          // lingoSpringApi.start({
+          //   x: RIGHT_X,
+          //   opacity: 0,
+          // })
           const res = await createSession.mutateAsync({
             fingerprint,
             settings: {
               firstLetter: true,
             },
           })
-          lingoSpring.opacity.set(0)
-          lingoSpring.x.set(95)
+          // lingoSpringApi.set({
+          //   x: LEFT_X,
+          //   opacity: 0,
+          // })
           setHistory([])
           //setConfettiVisible(false)
+
+          notifySession({
+            sessionId: res,
+            token: session.data?.user.token!,
+          })
 
           router.push(`/game/${res}`)
         }
       }}
       className={``}
     >
-      {createSession.isLoading ? <LoadingSpinner /> : 'New game'}
+      {createSession.isPending ? <LoadingSpinner /> : 'New game'}
     </Button>
   )
 }

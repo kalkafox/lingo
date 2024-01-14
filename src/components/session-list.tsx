@@ -1,5 +1,6 @@
 import { GuessedChar, GuessedLingoRow } from '@/types/lingo'
 import { fingerprintAtom, guessedLingoAtom, windowSizeAtom } from '@/util/atoms'
+import { RIGHT_X } from '@/util/constants'
 import { calculateTime, formatTimestamp } from '@/util/helpers'
 import useIsTouchDevice from '@/util/hooks'
 import { trpc } from '@/util/trpc'
@@ -7,7 +8,7 @@ import { Icon } from '@iconify/react'
 import { SpringValue } from '@react-spring/web'
 import { useAtom, useAtomValue } from 'jotai'
 import { useRouter } from 'next/router'
-import { Dispatch, ReactNode, SetStateAction } from 'react'
+import { Dispatch, SetStateAction } from 'react'
 import { ScrollArea } from './ui/scroll-area'
 import {
   Tooltip,
@@ -28,7 +29,7 @@ export function SessionList({
   setSessionListOpen?: Dispatch<SetStateAction<boolean>>
 }) {
   const fingerprint = useAtomValue(fingerprintAtom)
-  const sessions = trpc.getSessions.useQuery(fingerprint as string)
+  const sessions = trpc.getSessions.useQuery(fingerprint || '')
   const isMobile = useIsTouchDevice()
   const [windowSize, setWindowSize] = useAtom(windowSizeAtom)
   const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
@@ -40,6 +41,8 @@ export function SessionList({
         {sessions.data &&
           sessions.data.map((c, i) => {
             if (!c.history) return
+
+            console.log('hi')
 
             const words = Array.from(
               { length: c.history[0].length },
@@ -71,8 +74,8 @@ export function SessionList({
                 onClick={async (e) => {
                   setGuessedWords([])
                   if (lingoSpring) {
-                    lingoSpring.x.start(95)
                     lingoSpring.opacity.start(0)
+                    await lingoSpring.x.start(RIGHT_X)
                   }
                   router.push(`/game/${c.uniqueId}`)
                   if (listSpring && setSessionListOpen) {
@@ -133,32 +136,4 @@ export function SessionList({
       </div>
     </ScrollArea>
   ) : null
-}
-
-function TimestampTooltip({
-  children,
-  created,
-  finished,
-}: {
-  children: ReactNode
-  created: number
-  finished: number | null
-}) {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger className="flex">
-          <div className="flex items-center gap-x-1 text-xs">{children}</div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>
-            Created on <b>{formatTimestamp(created)}</b>
-          </p>
-          <p>
-            Finished on <b>{formatTimestamp(finished!)}</b>
-          </p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  )
 }

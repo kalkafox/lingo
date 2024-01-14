@@ -35,13 +35,14 @@ import {
   skipNotifyCreateSessionAtom,
   windowSizeAtom,
 } from '@/util/atoms'
-import { useCreateSession } from '@/util/hooks'
+import useIsTouchDevice, { useCreateSession } from '@/util/hooks'
 import { generatePattern } from '@/util/svg-patterns'
 import { Icon } from '@iconify/react'
 import { MoonIcon, SunIcon } from '@radix-ui/react-icons'
 import { SpringValue, animated, useSpring } from '@react-spring/web'
+import { useAction } from 'convex/react'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { useSession } from 'next-auth/react'
+import { signIn, signOut, useSession } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
@@ -54,6 +55,8 @@ import {
   useState,
 } from 'react'
 import { toast } from 'sonner'
+import { api } from '../../convex/_generated/api'
+import LingoNotifier from './lingo-notifier'
 import { SessionList } from './session-list'
 import { Toaster } from './ui/sonner'
 
@@ -70,6 +73,8 @@ function LingoRoot({ children }: { children: ReactNode }) {
   const [sessionListOpen, setSessionListOpen] = useState(false)
 
   const [windowSize, setWindowSize] = useAtom(windowSizeAtom)
+
+  const isMobile = useIsTouchDevice()
 
   const handleResize = (e: UIEvent) => {
     setSessionListOpen(false)
@@ -123,7 +128,8 @@ function LingoRoot({ children }: { children: ReactNode }) {
       <div className="fixed right-0 z-10">
         <Profile setSessionListOpen={setSessionListOpen} />
       </div>
-      <Toaster theme={'dark'} />
+      <LingoNotifier />
+      <Toaster theme={'dark'} position="bottom-center" richColors />
       <animated.div style={zoomSpring}>{children}</animated.div>
 
       <Loader />
@@ -198,6 +204,8 @@ function Profile({
 
   const dropdownRef = useRef<HTMLButtonElement>(null)
 
+  const notifySession = useAction(api.functions.verifyAndMutateSession)
+
   useEffect(() => {
     const sessionName = session.data?.user?.name
 
@@ -216,6 +224,11 @@ function Profile({
         })
 
         setGame({ ...game, gameId: res, active: true })
+
+        notifySession({
+          sessionId: res,
+          token: session.data?.user.token!,
+        })
 
         router.push(`/game/${res}`)
       } catch (e) {
@@ -343,6 +356,21 @@ function Profile({
             <Icon className="text-lg" icon="mdi:github" />
             <div className="mx-2">View project on GitHub</div>
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(e) =>
+              session.status === 'authenticated' ? signOut() : signIn()
+            }
+          >
+            <Icon
+              className="text-lg"
+              icon={`uil:sign${
+                session.status === 'authenticated' ? 'out' : 'in'
+              }`}
+            />
+            <div className="mx-2">
+              Sign {session.status === 'authenticated' ? 'out' : 'in'}
+            </div>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenu>
             <div className="flex justify-center">
@@ -425,7 +453,7 @@ function Settings({ zoom }: { zoom: { scale: SpringValue<number> } }) {
         cogSpring.y.start(-e.clientY * 0.01)
       }}
       style={settingsSpring}
-      className="fixed top-0 flex h-full w-full items-center justify-center bg-neutral-900/20 backdrop-blur-md transition-colors"
+      className="fixed top-0 z-10 flex h-full w-full items-center justify-center bg-neutral-900/20 backdrop-blur-md transition-colors"
     >
       <animated.div
         style={{

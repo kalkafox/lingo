@@ -2,6 +2,9 @@
 // oop = letter is out of position
 // zilch = nada, letter doesn't exist in word
 
+import type { lingoSessions } from '@/db/schema'
+import { InferSelectModel } from 'drizzle-orm'
+
 export type Letter = (string & { length: 1 } & Uppercase<string>) | null
 
 export interface Settings {
@@ -30,10 +33,21 @@ export interface GuessedChar {
   correct: boolean
 }
 
-// We're not checking for length here because there may be cases where the LingoRow returns with length < 5
-// I may rewrite this in the future depending on how i want to handle the error case here
 export type LingoRow = Char[]
 
 export type GuessedLingoRow = GuessedChar[]
 
 export type LingoRows = LingoRow[]
+
+export type LingoSession = InferSelectModel<typeof lingoSessions>
+
+export type LingoSessions = LingoSession[]
+
+export type ConvexLingoSession = {
+  sessionId: string
+  name?: string
+  image?: string
+  complete: boolean
+}
+
+export type ConvexLingoSessions = ConvexLingoSession[]

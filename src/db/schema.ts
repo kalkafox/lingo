@@ -106,6 +106,13 @@ export const sessions = lingoSchema.table('session', {
   expires: timestamp('expires', { mode: 'date' }).notNull(),
 })
 
+export const sessionUserRelations = relations(sessions, ({ one }) => ({
+  userId: one(lingoUsers, {
+    fields: [sessions.userId],
+    references: [lingoUsers.id],
+  }),
+}))
+
 export const verificationTokens = lingoSchema.table(
   'verificationToken',
   {

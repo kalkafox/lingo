@@ -6,6 +6,10 @@ import { Provider } from 'jotai'
 import { SessionProvider } from 'next-auth/react'
 import type { AppProps } from 'next/app'
 
+import { ConvexProvider, ConvexReactClient } from 'convex/react'
+
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL || '')
+
 const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
   return (
     <ThemeProvider
@@ -15,8 +19,9 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
       disableTransitionOnChange
     >
       <SessionProvider session={session}>
-        <Provider>
-          {/* <Toaster theme={'dark'} />
+        <ConvexProvider client={convex}>
+          <Provider>
+            {/* <Toaster theme={'dark'} />
           <div className="connections fixed h-full w-full transition-colors" />
           <animated.div style={zoomSpring}>
             <Component {...pageProps} />
@@ -26,10 +31,11 @@ const App = ({ Component, pageProps: { session, ...pageProps } }: AppProps) => {
           </div>
           <Loader />
           <Settings zoom={zoomSpring} /> */}
-          <LingoRoot>
-            <Component {...pageProps} />
-          </LingoRoot>
-        </Provider>
+            <LingoRoot>
+              <Component {...pageProps} />
+            </LingoRoot>
+          </Provider>
+        </ConvexProvider>
       </SessionProvider>
     </ThemeProvider>
   )

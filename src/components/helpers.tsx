@@ -1,4 +1,12 @@
+import { formatTimestamp } from '@/util/helpers'
 import { useCreateSession, useSessionInfo } from '@/util/hooks'
+import { ReactNode } from 'react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip'
 
 export const LoadingSpinner = () => (
   <svg
@@ -24,14 +32,14 @@ export const Loader = () => {
   const sessionInfo = useSessionInfo()
 
   if (
-    createSession.isLoading ||
+    createSession.isPending ||
     sessionInfo.isRefetching ||
     sessionInfo.isFetching
   )
     return (
       <div
         className={`fixed bottom-0 right-0 m-4 ${
-          !createSession.isLoading ||
+          !createSession.isPending ||
           sessionInfo.isRefetching ||
           sessionInfo.isFetching
             ? 'opacity-100'
@@ -41,4 +49,32 @@ export const Loader = () => {
         <LoadingSpinner />
       </div>
     )
+}
+
+export function TimestampTooltip({
+  children,
+  created,
+  finished,
+}: {
+  children: ReactNode
+  created: number
+  finished: number | null
+}) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger className="flex">
+          <div className="flex items-center gap-x-1">{children}</div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>
+            Created on <b>{formatTimestamp(created)}</b>
+          </p>
+          <p>
+            Finished on <b>{formatTimestamp(finished!)}</b>
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
 }

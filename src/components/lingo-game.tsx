@@ -5,36 +5,40 @@ import {
   lingoHistoryAtom,
   wordInputAtom,
 } from '@/util/atoms'
+import { LEFT_X } from '@/util/constants'
 import { inter } from '@/util/font'
 import { calculateTime } from '@/util/helpers'
 import useIsTouchDevice, { useSessionInfo } from '@/util/hooks'
+import { useLingoSpring } from '@/util/springs'
 import { trpc } from '@/util/trpc'
 import { Icon } from '@iconify/react'
-import { SpringValue, animated, useSpring } from '@react-spring/web'
+import { animated, useSpring } from '@react-spring/web'
+import { useAction } from 'convex/react'
 import { useAtom } from 'jotai'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { api } from '../../convex/_generated/api'
 import { ClaimButton, CopyButton, NewGame } from './buttons'
+import { TimestampTooltip } from './helpers'
 import { SessionList } from './session-list'
 
 export function LingoGame() {
   const sessionInfo = useSessionInfo()
 
-  const [lingoSpring, lingoSpringApi] = useSpring(() => ({
-    from: {
-      x: 95,
-      opacity: 0,
-    },
-  }))
+  const { lingoSpring, lingoSpringApi } = useLingoSpring()
+
+  const session = useSession()
 
   const [game, setGame] = useAtom(gameAtom)
 
   const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
 
   const router = useRouter()
+
+  const notifySession = useAction(api.functions.verifyAndMutateSession)
 
   useEffect(() => {
     if (!router.query.id) return
@@ -46,6 +50,8 @@ export function LingoGame() {
     if (!game.gameId) return
 
     sessionInfo.refetch().then(() => {
+      lingoSpring.x.set(LEFT_X)
+      lingoSpring.opacity.set(0)
       lingoSpring.x.start(0)
       lingoSpring.opacity.start(1)
     })
@@ -70,28 +76,28 @@ export function LingoGame() {
   //   }
   // }, [createSession, sessionInfo])
 
-  useEffect(() => {
-    if (
-      sessionInfo.data &&
-      router.asPath.split('/').slice(-1)[0] !== sessionInfo.data.id
-    )
-      return
+  // useEffect(() => {
+  //   if (
+  //     sessionInfo.data &&
+  //     router.asPath.split('/').slice(-1)[0] !== sessionInfo.data.id
+  //   )
+  //     return
 
-    if (!sessionInfo.data) return
-    console.log(router.asPath.split('/').slice(-1)[0])
+  //   if (!sessionInfo.data) return
+  //   console.log(router.asPath.split('/').slice(-1)[0])
 
-    if (lingoSpring.x.get() === 0 && lingoSpring.opacity.get() === 1) return
+  //   if (lingoSpring.x.get() === 0 && lingoSpring.opacity.get() === 1) return
 
-    if (lingoSpring.x.isAnimating && Math.abs(lingoSpring.x.get()) <= 1) return
+  //   if (lingoSpring.x.isAnimating && Math.abs(lingoSpring.x.get()) <= 1) return
 
-    lingoSpring.opacity.set(0)
-    lingoSpring.x.set(-95)
+  //   lingoSpring.opacity.set(0)
+  //   lingoSpring.x.set(-95)
 
-    if (sessionInfo.isRefetching || sessionInfo.isFetching) return
+  //   if (sessionInfo.isRefetching || sessionInfo.isFetching) return
 
-    lingoSpring.opacity.start(1)
-    lingoSpring.x.start(0)
-  }, [sessionInfo, router.asPath, lingoSpring])
+  //   lingoSpring.opacity.start(1)
+  //   lingoSpring.x.start(0)
+  // }, [sessionInfo, router.asPath, lingoSpring])
 
   return (
     <>
@@ -105,7 +111,7 @@ export function LingoGame() {
       >
         <History />
         <Input />
-        <Results lingoSpring={lingoSpring} />
+        <Results />
       </animated.div>
       <div className="fixed top-0">
         <SessionList lingoSpring={lingoSpring} />
@@ -114,11 +120,7 @@ export function LingoGame() {
   )
 }
 
-function Results({
-  lingoSpring,
-}: {
-  lingoSpring: { x: SpringValue<number>; opacity: SpringValue<number> }
-}) {
+function Results() {
   const { status } = useSession()
   const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
   const [history, setHistory] = useAtom(lingoHistoryAtom)
@@ -126,13 +128,6 @@ function Results({
   const router = useRouter()
 
   const sessionInfo = useSessionInfo()
-
-  const definition = trpc.getDefinition.useQuery(
-    sessionInfo.data?.word as string,
-    {
-      enabled: false,
-    },
-  )
 
   useEffect(() => {
     setGuessedWords([])
@@ -151,23 +146,6 @@ function Results({
       )
     })
   }, [history, router.asPath])
-
-  useEffect(() => {
-    if (sessionInfo.data?.word) {
-      //definition.refetch()
-    }
-  }, [sessionInfo.data])
-
-  useEffect(() => {
-    if (
-      guessedWords.filter((c) => c.correct).length >=
-      sessionInfo.data?.wordLength!
-    ) {
-      sessionInfo.refetch()
-    }
-  }, [guessedWords])
-
-  console.log(guessedWords.filter((c) => c.correct).length)
 
   if (guessedWords.filter((c) => c.correct).length <= 1) return
 
@@ -214,13 +192,16 @@ function Results({
           <div className="flex-col items-center p-2">
             <div className="flex items-center gap-x-1">
               <Icon icon="mdi:clock" />
-              <div>
+              <TimestampTooltip
+                created={sessionInfo.data.created}
+                finished={sessionInfo.data.finished}
+              >
                 Took{' '}
                 {calculateTime(
                   sessionInfo.data.finished - sessionInfo.data.created,
                 )}{' '}
                 ({calculateTime(Date.now() - sessionInfo.data.created)} ago)
-              </div>
+              </TimestampTooltip>
               <CopyButton />
             </div>
             <div className="flex items-center gap-x-1">
@@ -243,7 +224,7 @@ function Results({
           </div>
           <div className="flex justify-center gap-x-2">
             <ClaimButton status={status} />
-            <NewGame opacity={lingoSpring.opacity} x={lingoSpring.x} />
+            <NewGame />
           </div>
         </div>
         {/* {!sessionInfo.data.owner &&
@@ -276,22 +257,53 @@ function Input() {
   const [game, setGameAtom] = useAtom(gameAtom)
   const [borderColor, setBorderColor] = useState('')
 
+  const [checkResults, setCheckResults] = useState(false)
+
+  const [guessedWords, setGuessedWords] = useAtom(guessedLingoAtom)
+
+  const session = useSession()
+
+  const notifySession = useAction(api.functions.verifyAndMutateSession)
+
   const isMobile = useIsTouchDevice()
 
   const inputRef = useRef<HTMLInputElement>(null)
 
   const guessWord = trpc.guessWord.useMutation()
 
-  const [{ x, opacity, rotateZ }, api] = useSpring(() => ({
-    from: { x: 0, opacity: 0.5, rotateZ: 0 },
+  const [{ rotateX, opacity, rotateZ }, springApi] = useSpring(() => ({
+    from: { rotateX: 0, opacity: 0.5, rotateZ: 0 },
   }))
 
-  const xInterpolate = x.to(
+  const xInterpolate = rotateX.to(
     [0, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 1],
     [0, 10, -10, 10, -10, 10, -10, 0],
   )
 
   const sessionInfo = useSessionInfo()
+
+  useEffect(() => {
+    if (sessionInfo.data?.word) {
+      //definition.refetch()
+    }
+  }, [sessionInfo.data])
+
+  useEffect(() => {
+    if (
+      guessedWords.filter((c) => c.correct).length >=
+        sessionInfo.data?.wordLength! &&
+      checkResults
+    ) {
+      notifySession({
+        sessionId: sessionInfo.data?.id!,
+        token: session.data?.user.token!,
+      })
+      sessionInfo.refetch()
+      setCheckResults(false)
+    }
+  }, [guessedWords, checkResults])
+
+  console.log(guessedWords.filter((c) => c.correct).length)
 
   // ridiculously stupid dumb hack for android
   useEffect(() => {
@@ -331,7 +343,7 @@ function Input() {
         return (
           <div
             key={i}
-            className={`flex h-10 w-10 items-center justify-center self-center border-2 backdrop-blur-sm transition-colors ${borderColor}`}
+            className={`flex h-10 w-10 items-center justify-center backdrop-blur-sm self-center border-2 transition-colors ${borderColor}`}
           >
             <div className="">
               {(wordsSeparated &&
@@ -360,8 +372,8 @@ function Input() {
 
           const shake = async () => {
             setBorderColor('border-red-500')
-            await x.start({ from: 0, to: 1 })
-            if (x.isAnimating) return
+            await rotateX.start({ from: 0, to: 1 })
+            if (rotateX.isAnimating) return
             setBorderColor('border-green-500')
           }
 
@@ -416,6 +428,7 @@ function Input() {
             })
             inputRef.current.value = ''
             setWords('')
+            setCheckResults(true)
           }
 
           if (res && 'message' in res && res.message) {

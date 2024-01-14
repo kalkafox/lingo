@@ -2,7 +2,7 @@ import * as schema from '@/db/schema'
 import { DictionaryResponse } from '@/types/dictionary'
 import type { Char, Letter, LingoRow, LingoRows } from '@/types/lingo'
 import { defaultChar } from '@/util/defaults'
-import { TRPCError } from '@trpc/server'
+import { TRPCError } from '@trpc/core'
 import cryptoRandomString from 'crypto-random-string'
 import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
@@ -155,6 +155,62 @@ export const appRouter = router({
       })
     }
   }),
+  verify: procedure
+    .input(
+      z.object({
+        token: z.optional(z.string()),
+        sessionId: z.optional(z.string()),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      // both session and user
+      const verified: {
+        user: {
+          name: string | null
+          image: string | null
+        }
+        session: {
+          id: string | null
+          finished: boolean
+        }
+      } = {
+        user: {
+          name: null,
+          image: null,
+        },
+        session: {
+          id: null,
+          finished: false,
+        },
+      }
+
+      if (input.token) {
+        const token = await db.query.sessions.findFirst({
+          where: eq(schema.sessions.sessionToken, input.token),
+          with: {
+            userId: true,
+          },
+        })
+
+        if (token) {
+          verified.user = { name: token.userId.name, image: token.userId.image }
+        }
+      }
+
+      if (input.sessionId) {
+        const session = await db.query.lingoSessions.findFirst({
+          where: eq(schema.lingoSessions.uniqueId, input.sessionId),
+        })
+
+        if (session) {
+          verified.session.finished = session.finished ? true : false
+
+          verified.session.id = input.sessionId
+        }
+      }
+
+      return verified
+    }),
   getSessionInfo: procedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
@@ -208,11 +264,13 @@ export const appRouter = router({
 
     return (await res.json()) as DictionaryResponse
   }),
-  getSessions: procedure.input(z.string().max(50)).query(async ({ input }) => {
-    return await db.query.lingoSessions.findMany({
-      where: eq(schema.lingoSessions.fingerprint, input),
-    })
-  }),
+  getSessions: procedure
+    .input(z.string().max(50))
+    .query(async ({ input, ctx }) => {
+      return await db.query.lingoSessions.findMany({
+        where: eq(schema.lingoSessions.fingerprint, input),
+      })
+    }),
   guessWord: procedure
     .input(
       z.object({
