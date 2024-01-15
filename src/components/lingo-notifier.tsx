@@ -21,7 +21,10 @@ function LingoNotifier() {
 
     if (count < 1) return
 
-    const ownsSession = lastLingoSession.name === session.data?.user.name
+    const ownsSession =
+      lastLingoSession.name && session.data
+        ? lastLingoSession.name === session.data.user.name
+        : false
 
     if (!lastLingoSession.complete) {
       toast.info(
