@@ -8,9 +8,9 @@ module.exports = {
   testEnvironment: 'jsdom',
 
   testMatch: ['**/src/**/?(*.)test.{js,jsx,ts,tsx}'],
-  setupFilesAfterEnv: [path.join(__dirname, 'src/test/jest.setup.ts')],
+  setupFilesAfterEnv: ['./src/test/jest.setup.ts'],
 
   transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': ['ts-jest', { tsconfig: './tsconfig.jest.json' }],
+    '^.+\\.(js|jsx|ts|tsx)$': ['ts-jest', { tsconfig: './tsconfig.test.json' }],
   }
 };
