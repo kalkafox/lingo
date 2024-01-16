@@ -13,3 +13,5 @@ jobs:
       - run: bun run lint
       - run: bun run test:coverage
       - run: bun run build
+        env:
+          NEXT_PUBLIC_CONVEX_URL: https://example.com
