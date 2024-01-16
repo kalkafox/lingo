@@ -11,6 +11,7 @@ module.exports = {
   },
 
   collectCoverageFrom: [
+    'convex/**/*.{ts,tsx}',
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/*.test.{ts,tsx}',
