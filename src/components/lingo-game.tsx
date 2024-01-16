@@ -43,7 +43,7 @@ export function LingoGame() {
   useEffect(() => {
     if (!router.query.id) return
 
-    setGame({ ...game, gameId: router.query.id as string })
+    setGame((prev) => ({ ...prev, gameId: router.query.id as string }))
   }, [router.query.id])
 
   useEffect(() => {
