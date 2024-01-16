@@ -1,0 +1,17 @@
+name: Lint, build, and test
+
+on: push
+
+jobs:
+  build:
+    name: Lint, build, and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run test:coverage
+      - run: bun run build
+        env:
+          NEXT_PUBLIC_CONVEX_URL: https://example.com
