@@ -4,11 +4,12 @@ on: push
 
 jobs:
   build:
-    name: Build frontend
+    name: Lint, build, and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: ls
+      - run: pwd
       - uses: oven-sh/setup-bun@v1
       - run: bun install --frozen-lockfile
       - run: bun run lint
