@@ -54,50 +54,19 @@ export function LingoGame() {
       lingoSpring.opacity.set(0)
       lingoSpring.x.start(0)
       lingoSpring.opacity.start(1)
+      lingoSpringApi.set({
+        x: LEFT_X,
+        opacity: 0,
+      })
     })
   }, [game.gameId])
 
   useEffect(() => {
     setGame((prev: LingoState) => ({
       ...prev,
-      active: sessionInfo.data?.finished ? false : true,
+      active: !sessionInfo.data?.finished,
     }))
   }, [sessionInfo.data])
-
-  // useEffect(() => {
-  //   if (
-  //     createSession.isLoading ||
-  //     sessionInfo.isFetching ||
-  //     sessionInfo.isRefetching
-  //   ) {
-  //     lingoSpring.x.start(-90)
-  //   } else {
-  //     lingoSpring.x.start(0)
-  //   }
-  // }, [createSession, sessionInfo])
-
-  // useEffect(() => {
-  //   if (
-  //     sessionInfo.data &&
-  //     router.asPath.split('/').slice(-1)[0] !== sessionInfo.data.id
-  //   )
-  //     return
-
-  //   if (!sessionInfo.data) return
-  //   console.log(router.asPath.split('/').slice(-1)[0])
-
-  //   if (lingoSpring.x.get() === 0 && lingoSpring.opacity.get() === 1) return
-
-  //   if (lingoSpring.x.isAnimating && Math.abs(lingoSpring.x.get()) <= 1) return
-
-  //   lingoSpring.opacity.set(0)
-  //   lingoSpring.x.set(-95)
-
-  //   if (sessionInfo.isRefetching || sessionInfo.isFetching) return
-
-  //   lingoSpring.opacity.start(1)
-  //   lingoSpring.x.start(0)
-  // }, [sessionInfo, router.asPath, lingoSpring])
 
   return (
     <>
@@ -135,7 +104,7 @@ function Results() {
       setGuessedWords(
         (prev) =>
           row.map((l, index) => {
-            if (prev[index] && prev[index].correct) {
+            if (prev[index]?.correct) {
               return { letter: prev[index].letter, correct: true }
             }
             const res = l.correct
@@ -149,12 +118,7 @@ function Results() {
 
   if (guessedWords.filter((c) => c.correct).length <= 1) return
 
-  if (
-    !sessionInfo ||
-    !sessionInfo.data ||
-    !sessionInfo.data.finished ||
-    !sessionInfo.data.word
-  )
+  if (!sessionInfo.data?.word)
     return (
       <div
         className={`relative my-8 flex select-none justify-center gap-x-2 self-center`}
@@ -168,7 +132,7 @@ function Results() {
               } ${value.correct && 'bg-green-500/80'}`}
             >
               <div className="relative top-1 flex justify-center self-center text-center">
-                {(value && value.letter) ?? '.'}
+                {value?.letter ?? '.'}
               </div>
             </div>
           )
@@ -176,78 +140,52 @@ function Results() {
       </div>
     )
 
+  if (!sessionInfo.data.finished) return
+
   return (
-    <>
-      <div
-        className={`my-8 flex select-none flex-col items-center justify-center gap-y-2 self-center text-center ${inter.className}`}
-      >
-        {/* {definition.data && definition.data[0] && (
-          <div className="rounded-lg bg-neutral-200/80 p-2 dark:bg-neutral-900/80">
-            <div className="w-80">
-              {definition.data[0].meanings[0].definitions[0].definition}
-            </div>
+    <div
+      className={`my-8 flex select-none flex-col items-center justify-center gap-y-2 self-center text-center ${inter.className}`}
+    >
+      <div className="rounded-lg bg-neutral-200/80 p-2 dark:bg-neutral-900/80">
+        <div className="flex-col items-center p-2">
+          <div className="flex items-center gap-x-1">
+            <Icon icon="mdi:clock" />
+            <TimestampTooltip
+              created={sessionInfo.data.created}
+              finished={sessionInfo.data.finished}
+            >
+              Took{' '}
+              {calculateTime(
+                sessionInfo.data.finished - sessionInfo.data.created,
+              )}{' '}
+              ({calculateTime(Date.now() - sessionInfo.data.created)} ago)
+            </TimestampTooltip>
+            <CopyButton />
           </div>
-        )} */}
-        <div className="rounded-lg bg-neutral-200/80 p-2 dark:bg-neutral-900/80">
-          <div className="flex-col items-center p-2">
-            <div className="flex items-center gap-x-1">
-              <Icon icon="mdi:clock" />
-              <TimestampTooltip
-                created={sessionInfo.data.created}
-                finished={sessionInfo.data.finished}
-              >
-                Took{' '}
-                {calculateTime(
-                  sessionInfo.data.finished - sessionInfo.data.created,
-                )}{' '}
-                ({calculateTime(Date.now() - sessionInfo.data.created)} ago)
-              </TimestampTooltip>
-              <CopyButton />
+          <div className="flex items-center gap-x-1">
+            <Icon icon="mdi:user-outline" />
+            <div>
+              {sessionInfo.data.owner
+                ? sessionInfo.data.owner.name
+                : 'anonymous'}
             </div>
-            <div className="flex items-center gap-x-1">
-              <Icon icon="mdi:user-outline" />
-              <div>
-                {sessionInfo.data.owner
-                  ? sessionInfo.data.owner.name
-                  : 'anonymous'}
-              </div>
-              {sessionInfo.data.owner && (
-                <Image
-                  className={'mx-1 inline rounded-lg'}
-                  src={sessionInfo.data.owner.image!}
-                  width={20}
-                  height={20}
-                  alt={'owner_avatar'}
-                />
-              )}
-            </div>
-          </div>
-          <div className="flex justify-center gap-x-2">
-            <ClaimButton status={status} />
-            <NewGame />
+            {sessionInfo.data.owner && (
+              <Image
+                className={'mx-1 inline rounded-lg'}
+                src={sessionInfo.data.owner.image!}
+                width={20}
+                height={20}
+                alt={'owner_avatar'}
+              />
+            )}
           </div>
         </div>
-        {/* {!sessionInfo.data.owner &&
-              sessionInfo.data.fingerprint &&
-              sessionInfo.data.fingerprint === fingerprint && (
-                <button
-                  onClick={async () => {
-                    switch (status) {
-                      case 'authenticated':
-                        await claimSessionQuery.refetch()
-                        await sessionInfo.refetch()
-                        break
-                      case 'unauthenticated':
-                        signIn()
-                        break
-                    }
-                  }}
-                  className='bg-neutral-700 p-2 rounded-lg'>
-                  Claim it!
-                </button>
-              )} */}
+        <div className="flex justify-center gap-x-2">
+          <ClaimButton status={status} />
+          <NewGame />
+        </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -331,6 +269,7 @@ function Input() {
 
   if (!sessionInfo.data) return
   if (sessionInfo.data.finished || !game.gameId) return
+  if (!inputRef.current) return
 
   return (
     <animated.div
@@ -338,19 +277,14 @@ function Input() {
       className="relative flex select-none justify-center gap-x-2 self-center "
     >
       {Array.from({ length: sessionInfo.data.wordLength }, (_, i) => {
-        const wordsSeparated = inputRef.current?.value.split('')
+        const wordsSeparated = inputRef.current?.value.split('')!
 
         return (
           <div
             key={i}
             className={`flex h-10 w-10 items-center justify-center backdrop-blur-sm self-center border-2 transition-colors ${borderColor}`}
           >
-            <div className="">
-              {(wordsSeparated &&
-                wordsSeparated[i] &&
-                wordsSeparated[i].toUpperCase()) ??
-                '.'}
-            </div>
+            <div className="">{wordsSeparated[i]?.toUpperCase() ?? '.'}</div>
           </div>
         )
       })}
@@ -389,8 +323,6 @@ function Input() {
             id: game.gameId as string,
             word: inputRef.current.value,
           })
-
-          //console.log(res.data)
 
           if (
             'duplicate' in res &&
@@ -451,7 +383,7 @@ function Input() {
           ref={inputRef}
           onChange={(e) => {
             console.log(e)
-            if (sessionInfo.data && sessionInfo.data.finished) {
+            if (sessionInfo.data?.finished) {
               return
             }
             const event = e.nativeEvent as InputEvent
@@ -493,6 +425,7 @@ function History() {
 
   return history.map((value, index, array) => (
     <div
+      // deal with later if it becomes a problem
       key={index}
       className={`relative flex select-none justify-center gap-x-2 self-center py-1`}
     >
@@ -510,7 +443,7 @@ function History() {
                 'bg-neutral-300/80 dark:bg-neutral-900/20')
             }`}
           >
-            <div className="">{(v && v.letter) ?? '.'}</div>
+            <div className="">{v.letter ?? '.'}</div>
           </div>
         )
       })}

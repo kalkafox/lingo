@@ -33,7 +33,7 @@ function LingoNotifier() {
             <Image
               className="rounded-lg"
               src={lastLingoSession.image}
-              alt={lastLingoSession.name || 'user'}
+              alt={lastLingoSession.name ?? 'user'}
               width={32}
               height={32}
             />
@@ -56,7 +56,7 @@ function LingoNotifier() {
             <Image
               className="rounded-lg"
               src={lastLingoSession.image}
-              alt={lastLingoSession.name || 'user'}
+              alt={lastLingoSession.name ?? 'user'}
               width={32}
               height={32}
             />
