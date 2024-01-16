@@ -52,7 +52,7 @@ export const verifyAndMutateSession = action({
 
     if (!verified_data) return
 
-    if (verified_data.session && verified_data.session.id) {
+    if (verified_data?.session.id) {
       const session: {
         _id: Id<'sessions'>
         complete: boolean
