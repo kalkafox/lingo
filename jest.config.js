@@ -1,5 +1,7 @@
 const path = require('path');
 
+console.log(__dirname);
+
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
   preset: 'ts-jest',
@@ -8,9 +10,7 @@ module.exports = {
   testMatch: ['**/src/**/?(*.)test.{js,jsx,ts,tsx}'],
   setupFilesAfterEnv: [path.join(__dirname, 'src/test/jest.setup.ts')],
 
-  globals: {
-    "ts-jest": {
-      tsconfig: path.join(__dirname, "tsconfig.jest.json")
-    }
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': ['ts-jest', { tsconfig: path.join(__dirname, "tsconfig.jest.json") }],
   }
 };
