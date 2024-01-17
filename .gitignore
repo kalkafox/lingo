@@ -9,6 +9,10 @@
 # testing
 /coverage
 
+# profanity/word data
+words_219k.txt
+profanity_en.csv
+
 db-out
 drizzle
 

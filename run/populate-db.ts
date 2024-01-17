@@ -1,41 +1,63 @@
-import { drizzle } from 'drizzle-orm/mysql2'
+import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2'
 import mysql from 'mysql2/promise'
 import Papa from 'papaparse'
-import { config } from '../src/db/config'
+import config from '../src/db/config'
 import * as schema from '../src/db/schema'
 
-const connection = mysql.createPool(config)
+/** Populate db with every possible word in the dictionary.
+ *
+ */
+export default async function populateWordsV1(
+  db: MySql2Database<typeof schema>,
+) {
+  const file = await fetch(
+    'https://gist.githubusercontent.com/kalkafox/f7855da96e0dc1ebdbe6e9f28912b2d0/raw/a04c9a317fcc47a984ee723c03cd4572603fc3a5/processed.txt',
+  )
 
-console.log(process.env.DATABASE_USERNAME)
+  const words = (await file.text()).split('\n').filter((w) => w.length != 0)
 
-const db = drizzle(connection, { schema, mode: 'default' })
+  console.log(`Counted ${words.length} words.`)
 
-const file = Bun.file('run/processed.txt')
+  const profanity_res = await fetch(
+    'https://raw.githubusercontent.com/surge-ai/profanity/main/profanity_en.csv',
+  )
 
-const words = (await file.text()).split('\n').filter((w) => w.length != 0)
+  const profanityParsed = Papa.parse<string[]>(await profanity_res.text())
 
-console.log(`Counted ${words.length} words.`)
+  profanityParsed.data.shift()
 
-const profanity_res = await fetch(
-  'https://raw.githubusercontent.com/surge-ai/profanity/main/profanity_en.csv',
-)
+  const badWords = profanityParsed.data.map((l) => l[0])
 
-const profanityParsed = Papa.parse<string[]>(await profanity_res.text())
+  const badWordsSet = new Set(badWords)
 
-const profanityHeader = profanityParsed.data.shift()!
+  const filtered = words
+    .filter((w) => !badWordsSet.has(w))
+    .map((w) => ({ word: w }))
 
-const badWords = profanityParsed.data.map((l) => l[0])
+  const batchSize = 50000
 
-const filtered = words.filter((w) => !badWords.includes(w))
+  for (let i = 0; i < filtered.length; i += batchSize) {
+    const batch = filtered.slice(i, i + batchSize)
 
-console.log(`Filtered ${profanityParsed.data.length - filtered.length} words`)
+    await db.insert(schema.lingoWords).values(batch)
+    console.log(
+      `Populated lingoWords table with ${batch.length} columns. (${
+        i + batch.length
+      })`,
+    )
+  }
 
-const jobs = filtered.map((w) =>
-  db.insert(schema.lingoWords).values({ word: w }),
-)
+  console.log('Done.')
+}
 
-await Promise.all(jobs)
+// If run directly, assume the user wants to populate this particular table
 
-console.log('Done.')
+async function main() {
+  const connection = await mysql.createConnection(config)
 
-connection.end()
+  const db = drizzle(connection, { schema, mode: 'default' })
+
+  await populateWordsV1(db)
+
+  connection.end()
+}
