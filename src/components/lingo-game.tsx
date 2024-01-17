@@ -50,13 +50,14 @@ export function LingoGame() {
     if (!game.gameId) return
 
     sessionInfo.refetch().then(() => {
-      lingoSpring.x.set(LEFT_X)
-      lingoSpring.opacity.set(0)
-      lingoSpring.x.start(0)
-      lingoSpring.opacity.start(1)
       lingoSpringApi.set({
         x: LEFT_X,
         opacity: 0,
+      })
+
+      lingoSpringApi.start({
+        x: 0,
+        opacity: 1,
       })
     })
   }, [game.gameId])
