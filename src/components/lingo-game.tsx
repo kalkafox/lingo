@@ -270,7 +270,6 @@ function Input() {
 
   if (!sessionInfo.data) return
   if (sessionInfo.data.finished || !game.gameId) return
-  if (!inputRef.current) return
 
   return (
     <animated.div
