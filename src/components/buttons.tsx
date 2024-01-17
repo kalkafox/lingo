@@ -37,26 +37,14 @@ export const NewGame = () => {
   return (
     <Button
       onClick={async () => {
-        //console.log(fingerprint)
         if (fingerprint && fingerprint !== '') {
-          // lingoSpring.x.start(RIGHT_X)
-          // lingoSpring.opacity.start(0)
-          // lingoSpringApi.start({
-          //   x: RIGHT_X,
-          //   opacity: 0,
-          // })
           const res = await createSession.mutateAsync({
             fingerprint,
             settings: {
               firstLetter: true,
             },
           })
-          // lingoSpringApi.set({
-          //   x: LEFT_X,
-          //   opacity: 0,
-          // })
           setHistory([])
-          //setConfettiVisible(false)
 
           notifySession({
             sessionId: res,
@@ -114,9 +102,9 @@ export const CopyButton = ({ className }: { className?: string }) => {
 
 export function ClaimButton({
   status,
-}: {
+}: Readonly<{
   status: 'authenticated' | 'unauthenticated' | 'loading'
-}) {
+}>) {
   const [{ gameId }] = useAtom(gameAtom)
   const claimSessionMutation = trpc.claimSession.useMutation()
   const sessionInfo = useSessionInfo()
