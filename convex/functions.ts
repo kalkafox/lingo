@@ -1,111 +1,36 @@
-import type { AppRouter } from '@/server/routers/_app';
 import type { ConvexLingoSession } from '@/types/lingo';
-import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
+import { AnyDataModel, GenericActionCtx } from 'convex/server';
 import { v } from 'convex/values';
-import ky from 'ky';
-import { internal } from './_generated/api';
-import type { Id } from './_generated/dataModel';
-import {
-  action,
-  internalMutation,
-  internalQuery,
-  query,
-} from './_generated/server';
+import { action, internalMutation, internalQuery, query } from './_generated/server';
+import { VerifyOutputWithSessionId, getVerifyData, mutateSession } from './verifyAndMutateSession';
 
-type RouterInput = inferRouterInputs<AppRouter>;
-type RouterOutput = inferRouterOutputs<AppRouter>;
-
-type VerifyOutput = RouterOutput['verify'];
-type VerifyOutputWithSessionId = RouterOutput['verify'] & {
-  session: { id: string };
-};
-
-async function getVerifyData(
-  input: RouterInput['verify'],
-): Promise<VerifyOutput> {
-  const data = await ky
-    .get(
-      `https://lingo.kalkafox.dev/api/trpc/verify?input=${JSON.stringify(
-        input,
-      )}`,
-    )
-    .json<any>();
-
-  const verifiedData = data?.result?.data as VerifyOutput | undefined;
-
-  if (!verifiedData) throw new Error('Could not verify data');
-
-  return verifiedData;
-}
-
-// session id must exist for this
-function getCreateSessionPayload(verifiedData: VerifyOutputWithSessionId) {
-  return {
-    sessionId: verifiedData.session.id,
-    complete: verifiedData.session.finished,
-    image: verifiedData.user.image ?? undefined,
-    name: verifiedData.user.name ?? undefined,
-  };
-}
-
-type SessionType =
-  | undefined
-  | {
-      _id: Id<'sessions'>;
-      complete: boolean;
+export async function verifyAndMutateSessionHandler(
+  ctx: GenericActionCtx<AnyDataModel>,
+  args: any,
+) {
+  try {
+    const input = {
+      token: args.token,
+      sessionId: args.sessionId,
     };
 
-async function mutateSession(
-  ctx: any,
-  verifiedData: VerifyOutputWithSessionId,
-) {
-  const session: SessionType = await ctx.runQuery(
-    internal.functions.checkSession,
-    {
-      sessionId: verifiedData.session.id,
-    },
-  );
+    const verifiedData = await getVerifyData(input);
 
-  if (!session) {
-    await ctx.runMutation(
-      internal.functions.createSession,
-      getCreateSessionPayload(verifiedData),
-    );
-    return;
-  }
+    if (verifiedData?.session.id) {
+      await mutateSession(ctx, verifiedData as VerifyOutputWithSessionId);
+    }
 
-  if (session.complete) return;
+    return input;
+  } catch (e) {
+    console.error('Unable to verify session', e);
 
-  if (verifiedData.session.finished) {
-    await ctx.runMutation(internal.functions.updateSession, {
-      id: session._id,
-      complete: verifiedData.session.finished,
-    });
+    return undefined;
   }
 }
 
 export const verifyAndMutateSession = action({
   args: { sessionId: v.string(), token: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    try {
-      const input = {
-        token: args.token,
-        sessionId: args.sessionId,
-      };
-
-      const verifiedData = await getVerifyData(input);
-
-      if (verifiedData?.session.id) {
-        await mutateSession(ctx, verifiedData as VerifyOutputWithSessionId);
-      }
-
-      return input;
-    } catch (e) {
-      console.error('Unable to verify session', e);
-
-      return undefined;
-    }
-  },
+  handler: verifyAndMutateSessionHandler,
 });
 
 export const updateSession = internalMutation({

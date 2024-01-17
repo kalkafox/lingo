@@ -3,12 +3,16 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
 
-  testMatch: ['**/src/**/?(*.)test.{js,jsx,ts,tsx}'],
+  testMatch: ['**/{convex,src}/**/?(*.)test.{js,jsx,ts,tsx}'],
   setupFilesAfterEnv: ['./src/test/jest.setup.ts'],
 
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['ts-jest', { tsconfig: './tsconfig.test.json' }],
   },
+
+  "transformIgnorePatterns": [
+    "node_modules/(?!ky/.*)"
+  ],
 
   collectCoverageFrom: [
     'convex/*.{ts,tsx}',
