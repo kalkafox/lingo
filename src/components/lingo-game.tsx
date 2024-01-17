@@ -277,14 +277,16 @@ function Input() {
       className="relative flex select-none justify-center gap-x-2 self-center "
     >
       {Array.from({ length: sessionInfo.data.wordLength }, (_, i) => {
-        const wordsSeparated = inputRef.current?.value.split('')!
+        const wordsSeparated = inputRef.current?.value.split('')
 
         return (
           <div
             key={i}
             className={`flex h-10 w-10 items-center justify-center backdrop-blur-sm self-center border-2 transition-colors ${borderColor}`}
           >
-            <div className="">{wordsSeparated[i]?.toUpperCase() ?? '.'}</div>
+            <div className="">
+              {(wordsSeparated && wordsSeparated[i]?.toUpperCase()) ?? '.'}
+            </div>
           </div>
         )
       })}
