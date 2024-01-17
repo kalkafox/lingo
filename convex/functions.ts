@@ -1,107 +1,53 @@
-import type { AppRouter } from '@/server/routers/_app'
-import type { ConvexLingoSession } from '@/types/lingo'
-import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server'
-import { v } from 'convex/values'
-import { internal } from './_generated/api'
-import type { Id } from './_generated/dataModel'
-import {
-  action,
-  internalMutation,
-  internalQuery,
-  query,
-} from './_generated/server'
+import type { ConvexLingoSession } from '@/types/lingo';
+import { AnyDataModel, GenericActionCtx } from 'convex/server';
+import { v } from 'convex/values';
+import { action, internalMutation, internalQuery, query } from './_generated/server';
+import { VerifyOutputWithSessionId, getVerifyData, mutateSession } from './verifyAndMutateSession';
 
-type RouterInput = inferRouterInputs<AppRouter>
-type RouterOutput = inferRouterOutputs<AppRouter>
-
-type VerifyOutput = RouterOutput['verify']
-
-export const verifyAndMutateSession = action({
-  args: { sessionId: v.string(), token: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    // wait about a second for the db to populate
-
+export async function verifyAndMutateSessionHandler(
+  ctx: GenericActionCtx<AnyDataModel>,
+  args: any,
+) {
+  try {
     const input = {
       token: args.token,
       sessionId: args.sessionId,
+    };
+
+    const verifiedData = await getVerifyData(input);
+
+    if (verifiedData?.session.id) {
+      await mutateSession(ctx, verifiedData as VerifyOutputWithSessionId);
     }
 
-    const res = await fetch(
-      `https://lingo.kalkafox.dev/api/trpc/verify?input=${JSON.stringify(
-        input,
-      )}`,
-    )
+    return input;
+  } catch (e) {
+    console.error('Unable to verify session', e);
 
-    const data = await res.json()
+    return undefined;
+  }
+}
 
-    let verified_data = null
-
-    // would you like more javascript with your typescript?
-    if (
-      typeof data === 'object' &&
-      data &&
-      'result' in data &&
-      typeof data.result === 'object' &&
-      data.result &&
-      'data' in data.result &&
-      typeof data.result.data === 'object' &&
-      data.result.data
-    ) {
-      verified_data = data.result.data as VerifyOutput
-    }
-
-    if (!verified_data) return
-
-    if (verified_data?.session.id) {
-      const session: {
-        _id: Id<'sessions'>
-        complete: boolean
-      } = await ctx.runQuery(internal.functions.checkSession, {
-        sessionId: verified_data.session.id,
-      })
-
-      if (!session) {
-        await ctx.runMutation(internal.functions.createSession, {
-          sessionId: verified_data.session.id,
-          complete: verified_data.session.finished,
-          image: verified_data.user.image
-            ? verified_data.user.image
-            : undefined,
-          name: verified_data.user.name ? verified_data.user.name : undefined,
-        })
-
-        return
-      }
-
-      if (session.complete) return
-
-      if (verified_data.session.finished) {
-        await ctx.runMutation(internal.functions.updateSession, {
-          id: session._id,
-          complete: verified_data.session.finished,
-        })
-      }
-    }
-
-    return input
-  },
-})
+export const verifyAndMutateSession = action({
+  args: { sessionId: v.string(), token: v.optional(v.string()) },
+  handler: verifyAndMutateSessionHandler,
+});
 
 export const updateSession = internalMutation({
   args: { id: v.id('sessions'), complete: v.boolean() },
   handler: async (ctx, args) => {
-    const data = await ctx.db.get(args.id)
+    const data = await ctx.db.get(args.id);
 
-    await ctx.db.delete(args.id)
+    await ctx.db.delete(args.id);
 
     await ctx.db.insert('sessions', {
       sessionId: data.sessionId,
       name: data.name,
       image: data.image,
       complete: args.complete,
-    })
+    });
   },
-})
+});
 
 export const checkSession = internalQuery({
   args: { sessionId: v.string() },
@@ -109,12 +55,12 @@ export const checkSession = internalQuery({
     const session = await ctx.db
       .query('sessions')
       .filter((q) => {
-        return q.eq(q.field('sessionId'), args.sessionId)
+        return q.eq(q.field('sessionId'), args.sessionId);
       })
-      .first()
-    return session
+      .first();
+    return session;
   },
-})
+});
 
 export const createSession = internalMutation({
   args: {
@@ -130,13 +76,13 @@ export const createSession = internalMutation({
       image: args.image,
       complete: args.complete,
     }),
-})
+});
 
 export const getLatestSession = query({
   args: {},
   handler: async (ctx, args) => {
-    const sessions = await ctx.db.query('sessions').order('desc').take(1)
+    const sessions = await ctx.db.query('sessions').order('desc').take(1);
 
-    return sessions[0] as ConvexLingoSession
+    return sessions[0] as ConvexLingoSession;
   },
-})
+});
