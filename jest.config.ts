@@ -1,5 +1,6 @@
-/** @type {import('ts-jest').JestConfigWithTsJest} */
-module.exports = {
+import type { Config } from 'jest'
+
+export default {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
 
@@ -10,9 +11,7 @@ module.exports = {
     '^.+\\.(js|jsx|ts|tsx)$': ['ts-jest', { tsconfig: './tsconfig.test.json' }],
   },
 
-  "transformIgnorePatterns": [
-    "node_modules/(?!ky/.*)"
-  ],
+  transformIgnorePatterns: ['node_modules/(?!ky/.*)'],
 
   collectCoverageFrom: [
     'convex/*.{ts,tsx}',
@@ -22,4 +21,5 @@ module.exports = {
     '!src/test/**',
     '!**/node_modules/**',
   ],
-};
+  setupFiles: ['<rootDir>/.jest/setEnvVars.js'],
+} satisfies Config

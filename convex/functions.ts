@@ -1,53 +1,69 @@
-import type { ConvexLingoSession } from '@/types/lingo';
-import { AnyDataModel, GenericActionCtx } from 'convex/server';
-import { v } from 'convex/values';
-import { action, internalMutation, internalQuery, query } from './_generated/server';
-import { VerifyOutputWithSessionId, getVerifyData, mutateSession } from './verifyAndMutateSession';
+import { ConvexLingoSession } from '@/types/lingo'
+import { AnyDataModel, GenericActionCtx } from 'convex/server'
+import { v } from 'convex/values'
+import { Id } from './_generated/dataModel'
+import {
+  MutationCtx,
+  action,
+  internalMutation,
+  internalQuery,
+  query,
+} from './_generated/server'
+import {
+  VerifyOutputWithSessionId,
+  getVerifyData,
+  mutateSession,
+} from './verifyAndMutateSession'
 
 export async function verifyAndMutateSessionHandler(
   ctx: GenericActionCtx<AnyDataModel>,
-  args: any,
+  args: { token?: string; sessionId?: string },
 ) {
   try {
     const input = {
       token: args.token,
       sessionId: args.sessionId,
-    };
-
-    const verifiedData = await getVerifyData(input);
-
-    if (verifiedData?.session.id) {
-      await mutateSession(ctx, verifiedData as VerifyOutputWithSessionId);
     }
 
-    return input;
-  } catch (e) {
-    console.error('Unable to verify session', e);
+    const verifiedData = await getVerifyData(input)
 
-    return undefined;
+    if (verifiedData?.session.id) {
+      await mutateSession(ctx, verifiedData as VerifyOutputWithSessionId)
+    }
+
+    return input
+  } catch (e) {
+    console.error('Unable to verify session', e)
+
+    return undefined
   }
 }
 
 export const verifyAndMutateSession = action({
   args: { sessionId: v.string(), token: v.optional(v.string()) },
   handler: verifyAndMutateSessionHandler,
-});
+})
+
+export async function updateSessionHandler(
+  ctx: MutationCtx,
+  args: { id: Id<'sessions'>; complete: boolean },
+) {
+  const data = await ctx.db.get(args.id)
+
+  await ctx.db.delete(args.id)
+
+  await ctx.db.insert('sessions', {
+    sessionId: data.sessionId,
+    name: data.name,
+    image: data.image,
+    complete: args.complete,
+  })
+}
 
 export const updateSession = internalMutation({
   args: { id: v.id('sessions'), complete: v.boolean() },
-  handler: async (ctx, args) => {
-    const data = await ctx.db.get(args.id);
-
-    await ctx.db.delete(args.id);
-
-    await ctx.db.insert('sessions', {
-      sessionId: data.sessionId,
-      name: data.name,
-      image: data.image,
-      complete: args.complete,
-    });
-  },
-});
+  handler: updateSessionHandler,
+})
 
 export const checkSession = internalQuery({
   args: { sessionId: v.string() },
@@ -55,12 +71,12 @@ export const checkSession = internalQuery({
     const session = await ctx.db
       .query('sessions')
       .filter((q) => {
-        return q.eq(q.field('sessionId'), args.sessionId);
+        return q.eq(q.field('sessionId'), args.sessionId)
       })
-      .first();
-    return session;
+      .first()
+    return session
   },
-});
+})
 
 export const createSession = internalMutation({
   args: {
@@ -76,13 +92,13 @@ export const createSession = internalMutation({
       image: args.image,
       complete: args.complete,
     }),
-});
+})
 
 export const getLatestSession = query({
   args: {},
   handler: async (ctx, args) => {
-    const sessions = await ctx.db.query('sessions').order('desc').take(1);
+    const sessions = await ctx.db.query('sessions').order('desc').take(1)
 
-    return sessions[0] as ConvexLingoSession;
+    return sessions[0] as ConvexLingoSession
   },
-});
+})

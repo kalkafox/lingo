@@ -1,34 +1,40 @@
-import { verifyAndMutateSessionHandler } from './functions';
-import { getVerifyData, mutateSession } from './verifyAndMutateSession';
+import { verifyAndMutateSessionHandler } from './functions'
+import { getVerifyData, mutateSession } from './verifyAndMutateSession'
 
-jest.mock('./verifyAndMutateSession');
+jest.mock('./verifyAndMutateSession')
 // now we can separate the implementation from the test
 // this lets us easily say "getVerifyData" should return "foo", etc
 
 describe('verifyAndMutateSession handler', () => {
   afterEach(() => {
-    jest.clearAllMocks();
-  });
+    jest.clearAllMocks()
+  })
 
   it('fails if data cannot be verified', async () => {
-    (getVerifyData as any).mockRejectedValue(new Error('foo'));
+    ;(getVerifyData as any).mockRejectedValue(new Error('foo'))
 
-    await expect(verifyAndMutateSessionHandler(null as any, {})).resolves.toBeUndefined();
-  });
+    await expect(
+      verifyAndMutateSessionHandler(null as any, {}),
+    ).resolves.toBeUndefined()
+  })
 
   it('mutates the session if a session ID exists', async () => {
-    (getVerifyData as any).mockResolvedValue({ session: { id: 'foo' } });
+    ;(getVerifyData as any).mockResolvedValue({ session: { id: 'foo' } })
 
-    await expect( verifyAndMutateSessionHandler(null as any, {})).resolves.not.toBeUndefined();
+    await expect(
+      verifyAndMutateSessionHandler(null as any, {}),
+    ).resolves.not.toBeUndefined()
 
-    expect(mutateSession).toHaveBeenCalled();
-  });
+    expect(mutateSession).toHaveBeenCalled()
+  })
 
   it('does NOT mutate the session if a session ID is not present', async () => {
-    (getVerifyData as any).mockResolvedValue({ session: {} });
+    ;(getVerifyData as any).mockResolvedValue({ session: {} })
 
-    await expect( verifyAndMutateSessionHandler(null as any, {})).resolves.not.toBeUndefined();
+    await expect(
+      verifyAndMutateSessionHandler(null as any, {}),
+    ).resolves.not.toBeUndefined()
 
-    expect(mutateSession).not.toHaveBeenCalled();
-  });
-});
+    expect(mutateSession).not.toHaveBeenCalled()
+  })
+})

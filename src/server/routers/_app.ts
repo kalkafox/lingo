@@ -193,7 +193,10 @@ export const appRouter = router({
         })
 
         if (token) {
-          verified.user = { name: token.userId.name, image: token.userId.image }
+          verified.user = {
+            name: token.userId.name,
+            image: token.userId.image,
+          }
         }
       }
 

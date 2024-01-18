@@ -1,19 +1,23 @@
-import ky from 'ky';
-import { createSessionPayload, getVerifyData, mutateSession } from './verifyAndMutateSession';
+import ky from 'ky'
+import {
+  createSessionPayload,
+  getVerifyData,
+  mutateSession,
+} from './verifyAndMutateSession'
 
-jest.mock('ky'); // now ky is effectively overridden
+jest.mock('ky') // now ky is effectively overridden
 
 describe('fetching verify endpoint', () => {
   // demonstrative/reusable function to simulate response from api
   function mockResponse(data: any) {
-    (ky.get as any).mockReturnValue({
+    ;(ky.get as any).mockReturnValue({
       json: () => Promise.resolve(data),
-    });
+    })
   }
 
   afterEach(() => {
-    jest.clearAllMocks();
-  });
+    jest.clearAllMocks()
+  })
 
   it.each([
     undefined,
@@ -25,15 +29,15 @@ describe('fetching verify endpoint', () => {
     { result: {} },
     { result: { data: null } },
   ])('treats %p as a bad response', async (response) => {
-    mockResponse(response);
-    await expect(getVerifyData({})).rejects.toThrow();
-  });
+    mockResponse(response)
+    await expect(getVerifyData({})).rejects.toThrow()
+  })
 
   it('returns expected data', async () => {
-    mockResponse({ result: { data: 'return me!' } });
-    await expect(getVerifyData({})).resolves.toBe('return me!');
-  });
-});
+    mockResponse({ result: { data: 'return me!' } })
+    await expect(getVerifyData({})).resolves.toBe('return me!')
+  })
+})
 
 describe('create session payload', () => {
   // sent input (user), expected output (partial)
@@ -70,9 +74,9 @@ describe('create session payload', () => {
     const param = {
       user: input,
       session: { id: 'foo', finished: true },
-    };
-    expect(createSessionPayload(param)).toHaveProperty('image', expected.image);
-  });
+    }
+    expect(createSessionPayload(param)).toHaveProperty('image', expected.image)
+  })
 
   it('gives all the proper data', () => {
     expect(
@@ -85,14 +89,14 @@ describe('create session payload', () => {
       complete: false,
       image: 'user-image',
       name: 'user-name',
-    });
-  });
-});
+    })
+  })
+})
 
 describe('session mutator', () => {
   // helper
   function buildCtx(response: any) {
-    const mutationFunction = jest.fn();
+    const mutationFunction = jest.fn()
 
     return {
       ctx: {
@@ -100,37 +104,37 @@ describe('session mutator', () => {
         runMutation: mutationFunction,
       },
       mutationFunction,
-    };
+    }
   }
 
   const sampleVerifiedData = {
     session: { id: 'foo', finished: true },
     user: { image: null, name: null },
-  };
+  }
 
   it('creates session if none exists', async () => {
-    const { ctx, mutationFunction } = buildCtx(null);
-    await mutateSession(ctx, sampleVerifiedData);
-    expect(mutationFunction).toHaveBeenCalledTimes(1);
+    const { ctx, mutationFunction } = buildCtx(null)
+    await mutateSession(ctx, sampleVerifiedData)
+    expect(mutationFunction).toHaveBeenCalledTimes(1)
     expect(mutationFunction).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ sessionId: 'foo' }),
-    );
-  });
+    )
+  })
 
   it('does nothing for completed sessions', async () => {
-    const { ctx, mutationFunction } = buildCtx({ complete: true });
-    await mutateSession(ctx, sampleVerifiedData);
-    expect(mutationFunction).not.toHaveBeenCalled();
-  });
+    const { ctx, mutationFunction } = buildCtx({ complete: true })
+    await mutateSession(ctx, sampleVerifiedData)
+    expect(mutationFunction).not.toHaveBeenCalled()
+  })
 
   it('updates session if one exists', async () => {
-    const { ctx, mutationFunction } = buildCtx({ _id: 'i am here' });
-    await mutateSession(ctx, sampleVerifiedData);
-    expect(mutationFunction).toHaveBeenCalledTimes(1);
+    const { ctx, mutationFunction } = buildCtx({ _id: 'i am here' })
+    await mutateSession(ctx, sampleVerifiedData)
+    expect(mutationFunction).toHaveBeenCalledTimes(1)
     expect(mutationFunction).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ id: 'i am here' }),
-    );
-  });
-});
+    )
+  })
+})

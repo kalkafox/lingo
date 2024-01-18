@@ -13,6 +13,11 @@
 words_219k.txt
 profanity_en.csv
 
+
+#turbo
+.turbo
+
+#db
 db-out
 drizzle
 
