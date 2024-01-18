@@ -1,8 +1,8 @@
 import { ConvexLingoSession } from '@/types/lingo'
-import { AnyDataModel, GenericActionCtx } from 'convex/server'
 import { v } from 'convex/values'
 import { Id } from './_generated/dataModel'
 import {
+  ActionCtx,
   MutationCtx,
   action,
   internalMutation,
@@ -16,7 +16,7 @@ import {
 } from './verifyAndMutateSession'
 
 export async function verifyAndMutateSessionHandler(
-  ctx: GenericActionCtx<AnyDataModel>,
+  ctx: ActionCtx,
   args: { token?: string; sessionId?: string },
 ) {
   try {

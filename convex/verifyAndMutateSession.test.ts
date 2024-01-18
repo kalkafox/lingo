@@ -19,6 +19,20 @@ describe('fetching verify endpoint', () => {
     jest.clearAllMocks()
   })
 
+  it('should throw an error if PUBLIC_URL is not defined', async () => {
+    const originalEnv = process.env.PUBLIC_URL
+
+    try {
+      // Set process.env.PUBLIC_URL to undefined to simulate it not being defined
+      delete process.env.PUBLIC_URL
+
+      await expect(getVerifyData({})).rejects.toThrow()
+    } finally {
+      // Restore the original value of process.env.PUBLIC_URL
+      process.env.PUBLIC_URL = originalEnv
+    }
+  })
+
   it.each([
     undefined,
     null,
